@@ -22,7 +22,7 @@ fn main() {
 
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
-const MOVE_SPEED:f32 = 5.0;
+const MOVE_SPEED:f32 = 4.0;
 const MOUSE_SENSITIVITY: f32 = 0.05;
 const ROLL_SPEED:f32 = 1.0;
 
@@ -44,7 +44,7 @@ fn focus_camera_on_player(
     let mut player_transform = player_query.single();
     let dt = time.delta_seconds();
 
-    viewer_transform.translation = player_transform.transform_point(Vec3::new(0.0, 3.0, 10.0));
+    viewer_transform.translation = player_transform.transform_point(Vec3::new(0.0, 0.5, 1.5));
     viewer_transform.look_at(player_transform.translation, player_transform.up());
 }
 
@@ -85,8 +85,8 @@ fn move_player(
         roll -= 1.0;
     }
 
-    viewer_transform.translation.x += MOVE_SPEED * direction.x * delta;
-    viewer_transform.translation.y += MOVE_SPEED * direction.y * delta;
+    viewer_transform.translation.x += MOVE_SPEED / 2.0 * direction.x * delta;
+    viewer_transform.translation.y += MOVE_SPEED / 2.0 * direction.y * delta;
     viewer_transform.translation.z += MOVE_SPEED * direction.z * delta;
 
     let mut mouse_delta = Vec2::ZERO;
