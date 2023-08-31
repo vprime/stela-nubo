@@ -1,28 +1,35 @@
-use bevy::input::mouse::MouseMotion;
 // Entrypoint for the main game binary
 use bevy::prelude::*;
+use bevy::input::mouse::MouseMotion;
+use noise::{
+    core::worley::{distance_functions::*, worley_3d, ReturnType},
+    permutationtable::PermutationTable
+};
+mod generation;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
 const SPIN_SPEED:Vec3 = Vec3::new(0.0, 0.0, 1.0);
 const MOVE_SPEED:f32 = 0.9;
 const SPAWN_LIFETIME:f32 = 10.0;
 const SPAWN_SPEED:f32 = 0.0001;
+const SPAWN_AREA: f32 = 10.0;
+const SPAWN_SEED:u32 = 69;
+const SPAWN_FREQUENCY:f64 = 1.0;
+const SPAWN_DISPLACEMENT:f64 = 1.0;
+const SPAWN_CUTOFF:f64 = 0.4;
 
 #[derive(Resource)]
 struct SpawnTimer(Timer);
-
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(SpawnTimer(Timer::from_seconds(SPAWN_SPEED, TimerMode::Repeating)))
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, worley_spawner))
         .add_systems(Update, (
-            spin_cubes,
+            //spin_cubes,
             move_viewer,
-            spawn_cubes,
-            despawn_cubes
         ))
         .run();
 }
@@ -76,19 +83,47 @@ fn move_viewer(
     }
 }
 
-// fn move_cubes(
-//     mut query: Query<(&mut Transform, &Death)>,
-//     time: Res<Time>
-// ){
-//     let delta = time.delta_seconds();
-//     for(mut transform, velocity, death) in &mut query {
-//         let deathMultiplyer = (death.0 - time.elapsed_seconds()) * 0.7;
-//         transform.translation.x += velocity.x * delta * deathMultiplyer;
-//         transform.translation.y += velocity.y * delta * deathMultiplyer;
-//         transform.translation.z += velocity.z * delta * deathMultiplyer;
-//     }
-//
-// }
+
+fn worley_spawner(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+){
+    // Spawn point size 10
+    // scale 1:1
+    let hasher = PermutationTable::new(SPAWN_SEED);
+
+    let size = 10;
+
+    for n in 0..(size * size * size) {
+
+        let position = Vec3::new(
+            (n % size) as f32,
+            ((n % (size * size)) / size) as f32,
+            (n / (size * size)) as f32
+        );
+
+        let noise_value = worley_3d(
+            &hasher,
+            &euclidean,
+            ReturnType::Value,
+            [position.x.into(), position.y.into(), position.z.into()]
+        );
+
+        if noise_value > SPAWN_CUTOFF {
+            commands.spawn((PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube {size: 1.0})),
+                material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+                transform: Transform::from_xyz(position.x, position.y, position.z),
+                ..default()
+            },
+                //Spin(SPIN_SPEED),
+                //Death(time.elapsed_seconds() + SPAWN_LIFETIME)
+            ));
+        }
+    }
+}
 
 fn spin_cubes(
     mut query: Query<(&mut Transform, &Spin)>,
@@ -120,12 +155,9 @@ fn spawn_cubes(mut commands: Commands,
          mut timer: ResMut<SpawnTimer>,
          mut meshes: ResMut<Assets<Mesh>>,
          mut materials: ResMut<Assets<StandardMaterial>>,
-        query: Query<(&Transform, &Viewer)>) {
+        query: Query<&Transform, With<Viewer>>) {
 
-    // if !timer.0.tick(time.delta()).just_finished() {
-    //     return;
-    // }
-    for (transform, viewer) in &query {
+    for transform in &query {
         let base_time: f32 = time.delta_seconds();
 
         let set_x: f32 = transform.translation.x + (base_time * 10000.0 % 6.0) - 3.0;
@@ -141,8 +173,6 @@ fn spawn_cubes(mut commands: Commands,
             Death(time.elapsed_seconds() + SPAWN_LIFETIME)
         ));
     }
-
-
 }
 
 
@@ -153,43 +183,12 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
 
-    // // Asset loading builtins
-    // let drill = asset_server.load("models/Jacklegdrill.glb#Scene0");
-    //
-    // // Drill
-    // commands.spawn((
-    //     SceneBundle {
-    //     scene: drill,
-    //     transform: Transform::from_xyz(0.0, 0.0, 0.0),
-    //     ..default()
-    // },
-    //     Velocity(INITIAL_DRILL_DIRECTION.normalize() * SPIN_SPEED)
-    // ));
-
-    // Plane
-    // commands.spawn(PbrBundle {
-    //     mesh: meshes.add(shape::Plane::from_size(5.0).into()),
-    //     material: materials.add(Color::rgb(0.3, 0.5, 0.3).into()),
-    //     ..default()
-    // });
-    //
-    // // Cube
-    // commands.spawn((PbrBundle {
-    //     mesh: meshes.add(Mesh::from(shape::Cube {size: 1.0})),
-    //     material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-    //     transform: Transform::from_xyz(0.0, 0.5, 0.0),
-    //     ..default()
-    // },
-    //                 Velocity(SPIN_SPEED)
-    // ));
-
-
     // camera
     commands.spawn((Camera3dBundle {
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     },
-        Viewer,
+        Viewer
     ));
 
     commands.spawn((
@@ -199,7 +198,7 @@ fn setup(
                 shadows_enabled: true,
                 ..default()
             },
-            transform: Transform::from_xyz(4.0, 8.0, 4.0),
+            transform: Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         }
     ));
