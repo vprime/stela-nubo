@@ -5,18 +5,19 @@ use noise::{
     core::worley::{distance_functions::*, worley_3d, ReturnType},
     permutationtable::PermutationTable
 };
-mod generation;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
 const SPIN_SPEED:Vec3 = Vec3::new(0.0, 0.0, 1.0);
 const MOVE_SPEED:f32 = 0.9;
 const SPAWN_LIFETIME:f32 = 10.0;
-const SPAWN_SPEED:f32 = 0.0001;
-const SPAWN_AREA: f32 = 10.0;
+const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
 const SPAWN_FREQUENCY:f64 = 1.0;
 const SPAWN_DISPLACEMENT:f64 = 1.0;
-const SPAWN_CUTOFF:f64 = 0.4;
+const SPAWN_CUTOFF:f64 = 0.7;
+const SPAWN_AREA: f32 = 10.0;
+const MOVE_SPAWN_FREQUENCY:f32 = 2.0;
+const MOVE_SPAWN_RANGE:f32 = 20.0;
 
 #[derive(Resource)]
 struct SpawnTimer(Timer);
@@ -26,10 +27,13 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(SpawnTimer(Timer::from_seconds(SPAWN_SPEED, TimerMode::Repeating)))
-        .add_systems(Startup, (setup, worley_spawner))
+        .add_systems(Startup, (setup))
         .add_systems(Update, (
             //spin_cubes,
+            worley_spawner,
+            move_spawner,
             move_viewer,
+            despawn_cubes,
         ))
         .run();
 }
@@ -42,6 +46,12 @@ struct Death(f32);
 
 #[derive(Component)]
 struct Viewer;
+
+#[derive(Component, Deref)]
+struct SpawnArea(f32);
+
+#[derive(Component, Deref, DerefMut)]
+struct PreviousSpawnUpdate(Vec3);
 
 
 fn move_viewer(
@@ -83,46 +93,72 @@ fn move_viewer(
     }
 }
 
+fn move_spawner(
+    time: Res<Time>,
+    mut query: Query<&mut Transform, With<SpawnArea>>
+)
+{
+    let now = time.elapsed_seconds();
+    for mut transform in &mut query {
+        transform.translation.x = (now * MOVE_SPAWN_FREQUENCY).sin() * MOVE_SPAWN_RANGE;
+    }
+}
+
 
 fn worley_spawner(
     mut commands: Commands,
     time: Res<Time>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut query: Query<(&Transform, &SpawnArea, &mut PreviousSpawnUpdate)>
 ){
-    // Spawn point size 10
-    // scale 1:1
     let hasher = PermutationTable::new(SPAWN_SEED);
 
-    let size = 10;
+    for(transform, area, mut previous) in &mut query
+    {
+        let size = area.0.floor() as i16;
+        let radius = area.0 * 0.5;
 
-    for n in 0..(size * size * size) {
+        for n in 0..(size * size * size) {
 
-        let position = Vec3::new(
-            (n % size) as f32,
-            ((n % (size * size)) / size) as f32,
-            (n / (size * size)) as f32
-        );
+            let position = Vec3::new(
+                (transform.translation.x + (n % size) as f32).floor(),
+                (transform.translation.y + ((n % (size * size)) / size) as f32).floor(),
+                (transform.translation.z + (n / (size * size)) as f32).floor()
+            );
 
-        let noise_value = worley_3d(
-            &hasher,
-            &euclidean,
-            ReturnType::Value,
-            [position.x.into(), position.y.into(), position.z.into()]
-        );
+            if intersecting(position, previous.0, radius){
+                continue;
+            }
 
-        if noise_value > SPAWN_CUTOFF {
-            commands.spawn((PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Cube {size: 1.0})),
-                material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-                transform: Transform::from_xyz(position.x, position.y, position.z),
-                ..default()
-            },
-                //Spin(SPIN_SPEED),
-                //Death(time.elapsed_seconds() + SPAWN_LIFETIME)
-            ));
+            let noise_value = worley_3d(
+                &hasher,
+                &euclidean,
+                ReturnType::Value,
+                [position.x.into(), position.y.into(), position.z.into()]
+            );
+
+            if noise_value > SPAWN_CUTOFF {
+                commands.spawn((PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Cube {size: noise_value as f32})),
+                    material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+                    transform: Transform::from_xyz(position.x, position.y, position.z),
+                    ..default()
+                },
+                  //Spin(SPIN_SPEED),
+                  Death(time.elapsed_seconds() + SPAWN_LIFETIME)
+                ));
+            }
         }
+        previous.0 = transform.translation;
     }
+}
+
+
+fn intersecting(a_point: Vec3, b_bound: Vec3, radius: f32) -> bool {
+    (a_point.x < b_bound.x + radius && a_point.x > b_bound.x - radius) &&
+        (a_point.y < b_bound.y + radius && a_point.y > b_bound.y - radius) &&
+        (a_point.z < b_bound.z + radius && a_point.z > b_bound.z - radius)
 }
 
 fn spin_cubes(
@@ -140,15 +176,22 @@ fn spin_cubes(
 fn despawn_cubes(
     mut commands: Commands,
     time: Res<Time>,
-    query: Query<(Entity, &Death)>
+    query: Query<(Entity, &Transform, &Death)>,
+    spawner: Query<(&Transform, &SpawnArea)>
 ) {
     let elapsed = time.elapsed_seconds();
-    for (entity, death) in &query {
-        if death.0 < elapsed {
+
+    for (entity, transform, death) in &query {
+        for (spawner_transform, spawner_area) in &spawner {
+            if  intersecting(transform.translation, spawner_transform.translation, spawner_area.0) {
+                continue;
+            }
             commands.entity(entity).despawn();
         }
     }
 }
+
+
 
 fn spawn_cubes(mut commands: Commands,
          time: Res<Time>,
@@ -185,7 +228,7 @@ fn setup(
 
     // camera
     commands.spawn((Camera3dBundle {
-        transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
         ..default()
     },
         Viewer
@@ -199,6 +242,24 @@ fn setup(
                 ..default()
             },
             transform: Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..default()
+        }
+    ));
+
+    commands.spawn((
+        SpawnArea(10.0),
+         PreviousSpawnUpdate(Vec3::ZERO),
+         TransformBundle {
+             local: Transform::from_xyz(0.0, -10.0, 20.0),
+             ..default()
+         }
+        ));
+
+    commands.spawn((
+        SpawnArea(10.0),
+        PreviousSpawnUpdate(Vec3::ZERO),
+        TransformBundle {
+            local: Transform::from_xyz(0.0, 10.0, 20.0),
             ..default()
         }
     ));
