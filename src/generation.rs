@@ -1,5 +1,6 @@
 
 use bevy::prelude::*;
+use bevy_xpbd_3d::prelude::*;
 
 use noise::{
     core::worley::{distance_functions::*, worley_3d, ReturnType},
@@ -64,7 +65,8 @@ pub fn worley_spawner(
                     material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
                     transform: Transform::from_xyz(position.x, position.y, position.z),
                     ..default()
-                }, Asteroid
+                }, Asteroid,
+                   Collider::cuboid(noise_value as f32, noise_value as f32, noise_value as f32),
                 ));
             }
         }

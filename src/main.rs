@@ -3,13 +3,15 @@ mod generation;
 // Entrypoint for the main game binary
 use bevy::prelude::*;
 use bevy::input::mouse::MouseMotion;
+use bevy_xpbd_3d::prelude::*;
 use generation::*;
 
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, PhysicsPlugins::default()))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
+        .insert_resource(Gravity(Vec3::ZERO))
         .add_systems(Startup, setup)
         .add_systems(Update, (
             worley_spawner,
@@ -23,7 +25,7 @@ fn main() {
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
 const MOVE_SPEED:f32 = 4.0;
-const MOUSE_SENSITIVITY: f32 = 0.05;
+const MOUSE_SENSITIVITY: f32 = 0.005;
 const ROLL_SPEED:f32 = 1.0;
 
 
@@ -52,31 +54,36 @@ fn focus_camera_on_player(
 fn move_player(
     keyboard_input: Res<Input<KeyCode>>,
     mut mouse_input: EventReader<MouseMotion>,
-    mut query: Query<&mut Transform, (With<Player>, Without<Viewer>)>,
+    mut query: Query<(&Transform, &LinearVelocity, &AngularVelocity, &mut ExternalForce, &mut ExternalTorque), (With<Player>, Without<Viewer>)>,
     time: Res<Time>
 ){
     let delta = time.delta_seconds();
-    let mut viewer_transform = query.single_mut();
+    let (player_transform,
+        linear_velocity,
+        angular_velocity,
+        mut player_force,
+        mut player_torque) = query.single_mut();
+
     let mut direction = Vec3::ZERO;
     let mut roll = 0.0;
 
     if keyboard_input.pressed(KeyCode::A) {
-        direction += viewer_transform.left();
+        direction += player_transform.left();
     }
     if keyboard_input.pressed(KeyCode::D) {
-        direction += viewer_transform.right();
+        direction += player_transform.right();
     }
     if keyboard_input.pressed(KeyCode::W) {
-        direction += viewer_transform.forward();
+        direction += player_transform.forward();
     }
     if keyboard_input.pressed(KeyCode::S) {
-        direction += viewer_transform.back();
+        direction += player_transform.back();
     }
     if keyboard_input.pressed(KeyCode::Space) {
-        direction += viewer_transform.up();
+        direction += player_transform.up();
     }
     if keyboard_input.pressed(KeyCode::ShiftLeft){
-        direction += viewer_transform.down();
+        direction += player_transform.down();
     }
     if keyboard_input.pressed(KeyCode::Q) {
         roll += 1.0;
@@ -85,20 +92,23 @@ fn move_player(
         roll -= 1.0;
     }
 
-    viewer_transform.translation.x += MOVE_SPEED / 2.0 * direction.x * delta;
-    viewer_transform.translation.y += MOVE_SPEED / 2.0 * direction.y * delta;
-    viewer_transform.translation.z += MOVE_SPEED * direction.z * delta;
+    let force = (direction * MOVE_SPEED * delta);
+    player_force.apply_force(force).with_persistence(false);
 
     let mut mouse_delta = Vec2::ZERO;
     for movement in mouse_input.iter() {
         mouse_delta += movement.delta;
     }
+    let mut torque = Vec3::ZERO;
 
-    viewer_transform.rotate_local_z(roll * ROLL_SPEED * delta);
+    torque.z = roll * ROLL_SPEED * delta;
+
     if (mouse_delta != Vec2::ZERO) {
-        viewer_transform.rotate_local_y(mouse_delta.x * delta * MOUSE_SENSITIVITY * -1.0);
-        viewer_transform.rotate_local_x(mouse_delta.y * delta * MOUSE_SENSITIVITY);
+        torque.y = mouse_delta.x * delta * MOUSE_SENSITIVITY * -1.0;
+        torque.x = mouse_delta.y * delta * MOUSE_SENSITIVITY;
     }
+
+    player_torque.apply_torque(torque).with_persistence(false);
 }
 
 
@@ -107,7 +117,6 @@ fn setup(
     mut commands: Commands,
     assets: Res<AssetServer>
 ) {
-
     let player_spaceship = assets.load("models/player-ship/makoi.glb#Scene0");
 
     // player
@@ -116,6 +125,13 @@ fn setup(
             scene: player_spaceship,
             ..default()
         },
+        RigidBody::Dynamic,
+        Collider::cuboid(1.0, 1.0, 1.0),
+        Friction::new(0.4),
+        ExternalForce::default(),
+        ExternalTorque::default(),
+        LinearVelocity::default(),
+        AngularVelocity::default(),
        Player,
        SpawnArea(10.0),
        PreviousSpawnUpdate(Vec3::ZERO)
