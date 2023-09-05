@@ -1,5 +1,6 @@
 mod generation;
 mod player;
+mod util;
 
 // Entrypoint for the main game binary
 use bevy::prelude::*;
@@ -43,8 +44,14 @@ fn setup(
         AngularVelocity::default(),
         Player,
         PlayerInput::default(),
-        SpawnArea(10.0),
-        PreviousSpawnUpdate(Vec3::ZERO)
+        SpawnArea {
+            radius: 10,
+            scale: 5
+        },
+        PreviousSpawnUpdate(MapAddress{
+            x: 1024, y: 1024, z: 1024
+            //x: 0, y: 0, z: 0
+        })
     )).id();
 
     // camera

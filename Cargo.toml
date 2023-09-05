@@ -10,6 +10,7 @@ edition = "2021"
 bevy = { version = "0.11.2", features = ["dynamic_linking"] }
 bevy_xpbd_3d = "0.2.0"
 noise = "0.8.2"
+queues = "1.1.0"
 
 # Enable a small amount of optimization in debug mode
 [profile.dev]

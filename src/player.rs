@@ -46,7 +46,6 @@ impl Default for PlayerInput {
     }
 }
 
-
 fn player_linear_movement(
     time: Res<Time>,
     mut query: Query<(&PlayerInput, &Transform, &mut LinearVelocity), (With<Player>, Without<Viewer>)>
