@@ -3,7 +3,8 @@ mod generation;
 // Entrypoint for the main game binary
 use bevy::prelude::*;
 use bevy::input::mouse::MouseMotion;
-use bevy_xpbd_3d::prelude::*;
+use bevy::window::CursorGrabMode;
+use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use generation::*;
 
 
@@ -15,9 +16,13 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, (
             worley_spawner,
-            move_player,
+            player_input,
             despawn_cubes,
-            focus_camera_on_player
+            cursor_control
+        ))
+        .add_systems(PhysicsSchedule, (
+            player_linear_movement.before(PhysicsStepSet::BroadPhase),
+            player_angular_movement.before(PhysicsStepSet::BroadPhase),
         ))
         .run();
 }
@@ -25,8 +30,9 @@ fn main() {
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
 const MOVE_SPEED:f32 = 4.0;
-const MOUSE_SENSITIVITY: f32 = 0.005;
+const MOUSE_SENSITIVITY: f32 = 0.05;
 const ROLL_SPEED:f32 = 1.0;
+const STRAFE_SPEED:f32 = 0.25;
 
 
 #[derive(Component)]
@@ -35,80 +41,131 @@ struct Viewer;
 #[derive(Component)]
 struct Player;
 
+#[derive(Component)]
+pub struct PlayerInput {
+    pub direction: Vec3,
+    pub rotation: Vec3
+}
 
-fn focus_camera_on_player(
-    mut viewer_query: Query<&mut Transform, With<Viewer>>,
-    player_query: Query<&Transform, (With<Player>, Without<Viewer>)>,
-    time: Res<Time>
-)
-{
-    let mut viewer_transform = viewer_query.single_mut();
-    let mut player_transform = player_query.single();
-    let dt = time.delta_seconds();
-
-    viewer_transform.translation = player_transform.transform_point(Vec3::new(0.0, 0.5, 1.5));
-    viewer_transform.look_at(player_transform.translation, player_transform.up());
+impl Default for PlayerInput {
+    fn default() -> Self {
+        Self {
+            direction: Vec3::ZERO,
+            rotation: Vec3::ZERO
+        }
+    }
 }
 
 
-fn move_player(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut mouse_input: EventReader<MouseMotion>,
-    mut query: Query<(&Transform, &LinearVelocity, &AngularVelocity, &mut ExternalForce, &mut ExternalTorque), (With<Player>, Without<Viewer>)>,
-    time: Res<Time>
+fn player_linear_movement(
+    time: Res<Time>,
+    mut query: Query<(&PlayerInput, &Transform, &mut LinearVelocity), (With<Player>, Without<Viewer>)>
 ){
     let delta = time.delta_seconds();
-    let (player_transform,
-        linear_velocity,
-        angular_velocity,
-        mut player_force,
-        mut player_torque) = query.single_mut();
+    let (input,
+        transform,
+        mut velocity) = query.single_mut();
+    let mut force = Vec3::ZERO;
+    force += transform.forward() * input.direction.z;
+    force += transform.left() * input.direction.x;
+    force += transform.up() * input.direction.y;
 
+    velocity.0 += force * MOVE_SPEED * delta;
+    velocity.0 *= 0.99;
+}
+
+fn player_angular_movement(
+    time: Res<Time>,
+    mut query: Query<(&PlayerInput, &Transform, &mut AngularVelocity), (With<Player>, Without<Viewer>)>
+){
+    let delta = time.delta_seconds();
+    let (input,
+        transform,
+        mut velocity) = query.single_mut();
+
+    let mut force = Vec3::ZERO;
+    force += transform.forward() * input.rotation.z;
+    force += transform.left() * input.rotation.x;
+    force += transform.up() * input.rotation.y;
+
+    velocity.0 += force * ROLL_SPEED * delta;
+    velocity.0 *= 0.8;
+}
+
+fn cursor_control(
+    mouse_button_input: Res<Input<MouseButton>>,
+    mut windows: Query<&mut Window>,
+){
+    if mouse_button_input.pressed(MouseButton::Left) {
+        for mut window in &mut windows {
+            if !window.focused {
+                continue;
+            }
+
+            window.cursor.grab_mode = CursorGrabMode::Locked;
+            window.cursor.visible = false;
+        }
+    }
+    if mouse_button_input.just_released(MouseButton::Left) {
+        for mut window in &mut windows {
+            window.cursor.grab_mode = CursorGrabMode::None;
+            window.cursor.visible = true;
+        }
+    }
+}
+
+fn player_input(
+    mouse_button_input: Res<Input<MouseButton>>,
+    keyboard_input: Res<Input<KeyCode>>,
+    mut mouse_input: EventReader<MouseMotion>,
+    mut query: Query<&mut PlayerInput>,
+){
+    let mut player_input = query.single_mut();
     let mut direction = Vec3::ZERO;
-    let mut roll = 0.0;
 
     if keyboard_input.pressed(KeyCode::A) {
-        direction += player_transform.left();
+        direction.x = STRAFE_SPEED;
     }
     if keyboard_input.pressed(KeyCode::D) {
-        direction += player_transform.right();
+        direction.x = -STRAFE_SPEED;
     }
     if keyboard_input.pressed(KeyCode::W) {
-        direction += player_transform.forward();
+        direction.z = 1.0;
     }
     if keyboard_input.pressed(KeyCode::S) {
-        direction += player_transform.back();
+        direction.z = -1.0;
     }
     if keyboard_input.pressed(KeyCode::Space) {
-        direction += player_transform.up();
+        direction.y = STRAFE_SPEED;
     }
     if keyboard_input.pressed(KeyCode::ShiftLeft){
-        direction += player_transform.down();
+        direction.y = -STRAFE_SPEED;
     }
+
+    player_input.direction = direction;
+
+    let mut rotation = Vec3::ZERO;
+
     if keyboard_input.pressed(KeyCode::Q) {
-        roll += 1.0;
+        rotation.z = -1.0;
     }
     if keyboard_input.pressed(KeyCode::E){
-        roll -= 1.0;
+        rotation.z = 1.0;
     }
-
-    let force = (direction * MOVE_SPEED * delta);
-    player_force.apply_force(force).with_persistence(false);
 
     let mut mouse_delta = Vec2::ZERO;
-    for movement in mouse_input.iter() {
-        mouse_delta += movement.delta;
+    if mouse_button_input.pressed(MouseButton::Left) {
+        for movement in mouse_input.iter() {
+            mouse_delta += movement.delta;
+        }
+        if (mouse_delta != Vec2::ZERO) {
+            rotation.y = mouse_delta.x * MOUSE_SENSITIVITY * -1.0;
+            rotation.x = mouse_delta.y * MOUSE_SENSITIVITY;
+        }
     }
-    let mut torque = Vec3::ZERO;
+    player_input.rotation = rotation;
 
-    torque.z = roll * ROLL_SPEED * delta;
 
-    if (mouse_delta != Vec2::ZERO) {
-        torque.y = mouse_delta.x * delta * MOUSE_SENSITIVITY * -1.0;
-        torque.x = mouse_delta.y * delta * MOUSE_SENSITIVITY;
-    }
-
-    player_torque.apply_torque(torque).with_persistence(false);
 }
 
 
@@ -120,7 +177,7 @@ fn setup(
     let player_spaceship = assets.load("models/player-ship/makoi.glb#Scene0");
 
     // player
-    commands.spawn((
+    let player_id = commands.spawn((
         SceneBundle {
             scene: player_spaceship,
             ..default()
@@ -133,17 +190,20 @@ fn setup(
         LinearVelocity::default(),
         AngularVelocity::default(),
        Player,
+        PlayerInput::default(),
        SpawnArea(10.0),
        PreviousSpawnUpdate(Vec3::ZERO)
-    ));
+    )).id();
 
     // camera
-    commands.spawn((Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, -5.0).looking_at(Vec3::new(0.0, 0.0, 1.0), Vec3::Y),
+    let camera_id = commands.spawn((Camera3dBundle {
+        transform: Transform::from_xyz(0.0, 0.5, 1.5).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
         ..default()
     },
         Viewer
-    ));
+    )).id();
+
+    commands.entity(player_id).push_children(&[camera_id]);
 
     // sun
     commands.spawn((

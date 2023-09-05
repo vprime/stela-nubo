@@ -66,7 +66,7 @@ pub fn worley_spawner(
                     transform: Transform::from_xyz(position.x, position.y, position.z),
                     ..default()
                 }, Asteroid,
-                   Collider::cuboid(noise_value as f32, noise_value as f32, noise_value as f32),
+                   // Collider::cuboid(noise_value as f32, noise_value as f32, noise_value as f32),
                 ));
             }
         }
