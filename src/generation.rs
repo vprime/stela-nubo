@@ -18,16 +18,34 @@ const SPAWN_BLOCK_SIZE: f32 = 3.0;
 const SPAWN_DENSITY: f32 = 0.5;
 
 
-#[derive(Component)]
-pub struct Asteroid;
+pub struct MapGenerationPlugin;
+
+impl Plugin for MapGenerationPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .add_systems(Update, (
+                worley_spawner,
+                despawn_cubes,
+        ));
+    }
+}
 
 #[derive(Component, Deref)]
 pub struct SpawnArea(pub f32);
 
+#[derive(Component)]
+pub struct Asteroid;
+
 #[derive(Component, Deref, DerefMut)]
 pub struct PreviousSpawnUpdate(pub Vec3);
 
-pub fn worley_spawner(
+#[derive(Bundle)]
+pub struct MapSpawnerBundle {
+    spawn_area: SpawnArea,
+    previous_spawn_update: PreviousSpawnUpdate
+}
+
+fn worley_spawner(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -37,7 +55,7 @@ pub fn worley_spawner(
 
     for(transform, area, mut previous) in &mut query
     {
-        let size = area.0.floor() as i16;
+        let size = area.0.floor() as u32;
         let radius = area.0 * 0.5;
 
         for n in 0..(size * size * size) {
@@ -81,7 +99,7 @@ fn intersecting(a_point: Vec3, b_bound: Vec3, radius: f32) -> bool {
         (a_point.z < b_bound.z + radius && a_point.z > b_bound.z - radius)
 }
 
-pub fn despawn_cubes(
+fn despawn_cubes(
     mut commands: Commands,
     query: Query<(Entity, &Transform), With<Asteroid>>,
     spawner: Query<(&Transform, &SpawnArea)>
