@@ -15,6 +15,7 @@ use generation::*;
 use crate::application::ApplicationPlugin;
 use crate::input::{InputPlugin, PlayerAction};
 use crate::player::*;
+use crate::weapon::{WeaponBundle, WeaponOptions, WeaponPlugin};
 
 
 fn main() {
@@ -25,7 +26,8 @@ fn main() {
             PlayerControllerPlugin,
             MapGenerationPlugin,
             InputPlugin,
-            ApplicationPlugin
+            ApplicationPlugin,
+            WeaponPlugin
         ))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(Gravity(Vec3::ZERO))
@@ -63,6 +65,14 @@ fn setup(
             input_map: input_map.build()
         },
         PlayerInput::default(),
+        WeaponBundle {
+            options: WeaponOptions {
+                rate: 0.1,
+                speed: 10.0,
+                power: 1.0
+            },
+            ..default()
+        },
         SpawnArea {
             radius: 10,
             scale: 5

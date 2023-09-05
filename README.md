@@ -6,7 +6,7 @@ Stela nubo is a game created with Bevy and Rust
 [x] Move around the space in a spaceship 
 [x] collide with the objects
 [x] Input System
-[] Be able to shoot 
+[x] Be able to shoot 
 [] be able to explode things
 [] be exploded
 [] Things that move

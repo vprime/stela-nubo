@@ -3,11 +3,12 @@ use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::ActionState;
 use crate::input::PlayerAction;
+use crate::weapon::Cannon;
 
-const MOVE_SPEED:f32 = 4.0;
+const MOVE_SPEED:f32 = 5.0;
 const PITCH_SENSITIVITY: f32 = 10.0;
 const ROLL_SPEED:f32 = 10.0;
-const STRAFE_SPEED:f32 = 2.0;
+const STRAFE_SPEED:f32 = 3.0;
 
 pub struct PlayerControllerPlugin;
 
@@ -55,8 +56,8 @@ fn player_linear_movement(
         mut velocity) = query.single_mut();
     let mut force = Vec3::ZERO;
     force += transform.forward() * input.direction.z * MOVE_SPEED;
-    force += transform.left() * input.direction.x * STRAFE_SPEED;
-    force += transform.up() * input.direction.y * STRAFE_SPEED;
+    force += transform.right() * input.direction.x * STRAFE_SPEED;
+    force += transform.down() * input.direction.y * STRAFE_SPEED;
 
     velocity.0 += force * delta;
     velocity.0 *= 0.99;
@@ -81,9 +82,9 @@ fn player_angular_movement(
 }
 
 fn player_input(
-    mut query: Query<(&ActionState<PlayerAction>, &mut PlayerInput)>,
+    mut query: Query<(&ActionState<PlayerAction>, &mut PlayerInput, &mut Cannon)>,
 ){
-    let (input_state, mut player_input) = query.single_mut();
+    let (input_state, mut player_input, mut cannon) = query.single_mut();
 
     let mut direction = Vec3::ZERO;
     if input_state.pressed(PlayerAction::Left){
@@ -108,6 +109,8 @@ fn player_input(
         rotation.z = input_state.value(PlayerAction::Roll);
     }
     player_input.rotation = rotation;
+
+    cannon.0 = input_state.pressed(PlayerAction::Shoot);
 }
 
 
