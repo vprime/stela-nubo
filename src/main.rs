@@ -1,11 +1,19 @@
 mod generation;
 mod player;
 mod util;
+mod weapon;
+mod input;
+mod application;
 
 // Entrypoint for the main game binary
 use bevy::prelude::*;
 use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
+use leafwing_input_manager::{Actionlike, InputManagerBundle};
+use leafwing_input_manager::action_state::ActionState;
+use leafwing_input_manager::prelude::InputMap;
 use generation::*;
+use crate::application::ApplicationPlugin;
+use crate::input::{InputPlugin, PlayerAction};
 use crate::player::*;
 
 
@@ -15,7 +23,9 @@ fn main() {
             DefaultPlugins,
             PhysicsPlugins::default(),
             PlayerControllerPlugin,
-            MapGenerationPlugin
+            MapGenerationPlugin,
+            InputPlugin,
+            ApplicationPlugin
         ))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(Gravity(Vec3::ZERO))
@@ -28,6 +38,11 @@ fn setup(
     assets: Res<AssetServer>
 ) {
     let player_spaceship = assets.load("models/player-ship/makoi.glb#Scene0");
+
+    let mut input_map = InputMap::default();
+    for action in PlayerAction::variants() {
+        input_map.insert(PlayerAction::default_keyboard_mouse_input(action), action);
+    }
 
     // player
     let player_id = commands.spawn((
@@ -43,6 +58,10 @@ fn setup(
         LinearVelocity::default(),
         AngularVelocity::default(),
         Player,
+        InputManagerBundle::<PlayerAction>{
+            action_state: ActionState::default(),
+            input_map: input_map.build()
+        },
         PlayerInput::default(),
         SpawnArea {
             radius: 10,

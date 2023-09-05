@@ -1,13 +1,13 @@
 
 use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use bevy::prelude::*;
-use bevy::input::mouse::MouseMotion;
-use bevy::window::CursorGrabMode;
+use leafwing_input_manager::prelude::ActionState;
+use crate::input::PlayerAction;
 
 const MOVE_SPEED:f32 = 4.0;
-const MOUSE_SENSITIVITY: f32 = 0.05;
-const ROLL_SPEED:f32 = 1.0;
-const STRAFE_SPEED:f32 = 0.25;
+const PITCH_SENSITIVITY: f32 = 10.0;
+const ROLL_SPEED:f32 = 10.0;
+const STRAFE_SPEED:f32 = 2.0;
 
 pub struct PlayerControllerPlugin;
 
@@ -15,8 +15,7 @@ impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, (
-                player_input,
-                cursor_control))
+                player_input))
             .add_systems(PhysicsSchedule, (
                 player_linear_movement.before(PhysicsStepSet::BroadPhase),
                 player_angular_movement.before(PhysicsStepSet::BroadPhase),
@@ -55,11 +54,11 @@ fn player_linear_movement(
         transform,
         mut velocity) = query.single_mut();
     let mut force = Vec3::ZERO;
-    force += transform.forward() * input.direction.z;
-    force += transform.left() * input.direction.x;
-    force += transform.up() * input.direction.y;
+    force += transform.forward() * input.direction.z * MOVE_SPEED;
+    force += transform.left() * input.direction.x * STRAFE_SPEED;
+    force += transform.up() * input.direction.y * STRAFE_SPEED;
 
-    velocity.0 += force * MOVE_SPEED * delta;
+    velocity.0 += force * delta;
     velocity.0 *= 0.99;
 }
 
@@ -73,88 +72,42 @@ fn player_angular_movement(
         mut velocity) = query.single_mut();
 
     let mut force = Vec3::ZERO;
-    force += transform.forward() * input.rotation.z;
-    force += transform.left() * input.rotation.x;
-    force += transform.up() * input.rotation.y;
+    force += transform.forward() * input.rotation.z *  ROLL_SPEED;
+    force += transform.right() * input.rotation.x * PITCH_SENSITIVITY;
+    force += transform.up() * input.rotation.y * PITCH_SENSITIVITY;
 
-    velocity.0 += force * ROLL_SPEED * delta;
+    velocity.0 += force * delta;
     velocity.0 *= 0.8;
 }
 
-fn cursor_control(
-    mouse_button_input: Res<Input<MouseButton>>,
-    mut windows: Query<&mut Window>,
-){
-    if mouse_button_input.pressed(MouseButton::Left) {
-        for mut window in &mut windows {
-            if !window.focused {
-                continue;
-            }
-
-            window.cursor.grab_mode = CursorGrabMode::Locked;
-            window.cursor.visible = false;
-        }
-    }
-    if mouse_button_input.just_released(MouseButton::Left) {
-        for mut window in &mut windows {
-            window.cursor.grab_mode = CursorGrabMode::None;
-            window.cursor.visible = true;
-        }
-    }
-}
-
 fn player_input(
-    mouse_button_input: Res<Input<MouseButton>>,
-    keyboard_input: Res<Input<KeyCode>>,
-    mut mouse_input: EventReader<MouseMotion>,
-    mut query: Query<&mut PlayerInput>,
+    mut query: Query<(&ActionState<PlayerAction>, &mut PlayerInput)>,
 ){
-    let mut player_input = query.single_mut();
+    let (input_state, mut player_input) = query.single_mut();
+
     let mut direction = Vec3::ZERO;
-
-    if keyboard_input.pressed(KeyCode::A) {
-        direction.x = STRAFE_SPEED;
+    if input_state.pressed(PlayerAction::Left){
+        direction.x = input_state.value(PlayerAction::Left);
     }
-    if keyboard_input.pressed(KeyCode::D) {
-        direction.x = -STRAFE_SPEED;
+    if input_state.pressed(PlayerAction::Forward) {
+        direction.z = input_state.value(PlayerAction::Forward);
     }
-    if keyboard_input.pressed(KeyCode::W) {
-        direction.z = 1.0;
+    if input_state.pressed(PlayerAction::Up) {
+        direction.y = input_state.value(PlayerAction::Up);
     }
-    if keyboard_input.pressed(KeyCode::S) {
-        direction.z = -1.0;
-    }
-    if keyboard_input.pressed(KeyCode::Space) {
-        direction.y = STRAFE_SPEED;
-    }
-    if keyboard_input.pressed(KeyCode::ShiftLeft){
-        direction.y = -STRAFE_SPEED;
-    }
-
     player_input.direction = direction;
 
     let mut rotation = Vec3::ZERO;
-
-    if keyboard_input.pressed(KeyCode::Q) {
-        rotation.z = -1.0;
+    if input_state.pressed(PlayerAction::Pitch) {
+        rotation.x = input_state.value(PlayerAction::Pitch);
     }
-    if keyboard_input.pressed(KeyCode::E){
-        rotation.z = 1.0;
+    if input_state.pressed(PlayerAction::Yaw) {
+        rotation.y = input_state.value(PlayerAction::Yaw);
     }
-
-    let mut mouse_delta = Vec2::ZERO;
-    if mouse_button_input.pressed(MouseButton::Left) {
-        for movement in mouse_input.iter() {
-            mouse_delta += movement.delta;
-        }
-        if (mouse_delta != Vec2::ZERO) {
-            rotation.y = mouse_delta.x * MOUSE_SENSITIVITY * -1.0;
-            rotation.x = mouse_delta.y * MOUSE_SENSITIVITY;
-        }
+    if input_state.pressed(PlayerAction::Roll) {
+        rotation.z = input_state.value(PlayerAction::Roll);
     }
     player_input.rotation = rotation;
-
-
 }
 
 
