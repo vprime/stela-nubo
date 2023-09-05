@@ -4,6 +4,7 @@ mod util;
 mod weapon;
 mod input;
 mod application;
+mod destructible;
 
 // Entrypoint for the main game binary
 use bevy::prelude::*;
@@ -13,6 +14,7 @@ use leafwing_input_manager::action_state::ActionState;
 use leafwing_input_manager::prelude::InputMap;
 use generation::*;
 use crate::application::ApplicationPlugin;
+use crate::destructible::DestructiblesPlugin;
 use crate::input::{InputPlugin, PlayerAction};
 use crate::player::*;
 use crate::weapon::{WeaponBundle, WeaponOptions, WeaponPlugin};
@@ -27,7 +29,8 @@ fn main() {
             MapGenerationPlugin,
             InputPlugin,
             ApplicationPlugin,
-            WeaponPlugin
+            WeaponPlugin,
+            DestructiblesPlugin
         ))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(Gravity(Vec3::ZERO))

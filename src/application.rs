@@ -23,16 +23,16 @@ fn cursor_control(
     for focus in window_focused.iter() {
         if focus.focused {
             for mut window in &mut windows {
-                window.cursor.grab_mode = CursorGrabMode::Locked;
                 window.cursor.visible = false;
+                window.cursor.grab_mode = CursorGrabMode::Locked;
             }
         }
     }
 
     if player_input.pressed(PlayerAction::Menu) {
         for mut window in &mut windows {
-            window.cursor.grab_mode = CursorGrabMode::None;
             window.cursor.visible = true;
+            window.cursor.grab_mode = CursorGrabMode::None;
         }
     }
 }

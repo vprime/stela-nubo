@@ -1,6 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
+use crate::destructible::DamageEvent;
 
 pub struct WeaponPlugin;
 
@@ -8,7 +9,7 @@ impl Plugin for WeaponPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Startup, setup)
-            .add_systems(Update, (shoot_weapons, decay_bullets));
+            .add_systems(Update, (shoot_weapons, decay_bullets, bullet_damage));
     }
 }
 
@@ -114,6 +115,30 @@ fn decay_bullets(
         lifetime.timer.tick(time.delta());
         if lifetime.timer.finished() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn bullet_damage(
+    bullets: Query<Entity, With<Bullet>>,
+    mut commands: Commands,
+    mut collision_event: EventReader<CollisionStarted>,
+    mut damage_event: EventWriter<DamageEvent>
+){
+    for CollisionStarted(entity1, entity2) in collision_event.iter() {
+        if bullets.contains(*entity1) {
+            damage_event.send(DamageEvent {
+                subject: *entity2,
+                value: 1.0
+            });
+            commands.entity(*entity1).despawn();
+        }
+        if bullets.contains(*entity2) {
+            damage_event.send(DamageEvent {
+                subject: *entity1,
+                value: 1.0
+            });
+            commands.entity(*entity2).despawn();
         }
     }
 }

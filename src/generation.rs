@@ -7,6 +7,7 @@ use noise::{
 };
 extern crate queues;
 use queues::*;
+use crate::destructible::DamageEvent;
 
 const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
@@ -31,6 +32,7 @@ impl Plugin for MapGenerationPlugin {
                 worley_spawner,
                 despawn_cubes,
                 spawn_from_queue,
+                destroy_asteroids
         ));
     }
 }
@@ -206,6 +208,19 @@ fn despawn_cubes(
                 continue;
             }
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn destroy_asteroids(
+    asteroids: Query<Entity, With<Asteroid>>,
+    mut commands: Commands,
+    mut damage_event: EventReader<DamageEvent>
+){
+    for damage in damage_event.iter(){
+        if asteroids.contains(damage.subject) {
+            commands.entity(damage.subject).despawn();
+            println!("Destroying Asteroid {0:?}!", damage.subject);
         }
     }
 }
