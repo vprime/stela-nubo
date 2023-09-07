@@ -94,7 +94,7 @@ fn setup(
 
 fn spawn_from_queue(
     mut commands: Commands,
-    mut spawn_queue_query: Query<&mut SpawnQueue>,
+    mut spawn_queue_query: Query<&mut SpawnQueue, Changed<SpawnQueue>>,
     handle_query: Query<&SpawnableHandles>
 ){
     let handles = handle_query.single();
