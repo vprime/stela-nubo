@@ -2,8 +2,10 @@
 use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use bevy::prelude::*;
 use leafwing_input_manager::prelude::ActionState;
+use crate::destructible::ExplosionEvent;
 use crate::input::PlayerAction;
 use crate::weapon::Cannon;
+use crate::health::*;
 
 const MOVE_SPEED:f32 = 5.0;
 const PITCH_SENSITIVITY: f32 = 10.0;
@@ -16,7 +18,9 @@ impl Plugin for PlayerControllerPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, (
-                player_input))
+                player_input,
+                player_death
+            ))
             .add_systems(PhysicsSchedule, (
                 player_linear_movement.before(PhysicsStepSet::BroadPhase),
                 player_angular_movement.before(PhysicsStepSet::BroadPhase),
@@ -113,5 +117,19 @@ fn player_input(
     cannon.0 = input_state.pressed(PlayerAction::Shoot);
 }
 
-
+fn player_death(
+    mut death_event: EventReader<DeathEvent>,
+    mut explosion_event: EventWriter<ExplosionEvent>,
+    mut query: Query<(&mut Visibility, &Transform), With<Player>>,
+){
+    for death in death_event.iter(){
+        if let Ok((mut visibility, transform)) = query.get_mut(death.subject) {
+            *visibility = Visibility::Hidden;
+            explosion_event.send(ExplosionEvent {
+                position: transform.translation,
+                power: 10.0
+            });
+        }
+    }
+}
 

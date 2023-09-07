@@ -15,7 +15,8 @@ pub struct DestructiblesPlugin;
 
 impl Plugin for DestructiblesPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<DamageEvent>()
+        app
+            .add_event::<ExplosionEvent>()
             .add_plugins((
                 MaterialPlugin::<ParticlesMaterial>::default(),
             ))
@@ -27,10 +28,11 @@ impl Plugin for DestructiblesPlugin {
     }
 }
 const EXPLODE_LIFE: f32 = 5.0;
+
 #[derive(Event)]
-pub struct DamageEvent {
-    pub subject: Entity,
-    pub value: f32
+pub struct ExplosionEvent {
+    pub position: Vec3,
+    pub power: f32
 }
 
 #[derive(Component)]
@@ -127,56 +129,53 @@ fn spawn_explosions(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ParticlesMaterial>>,
-    mut damage_event: EventReader<DamageEvent>,
-    explosive_query: Query<&Transform, With<Explodeable>>
+    mut explosion_event: EventReader<ExplosionEvent>
 )
 {
     let now = time.elapsed_seconds();
-    for damage in damage_event.iter(){
-        if let Ok(transform) = explosive_query.get(damage.subject) {
-            let mut particles =
-                Mesh::from(Particles { num_particles: 100 });
+    for explosion in explosion_event.iter(){
+        let mut particles =
+            Mesh::from(Particles { num_particles: (explosion.power * 10.0) as u32 });
 
-            if let Some(VertexAttributeValues::Float32x3(
-                            positions,
-                        )) = particles.attribute(Mesh::ATTRIBUTE_POSITION)
-            {
-                let colors: Vec<[f32; 4]> = positions
-                    .iter()
-                    .map(|[r, g, b]| {
-                        [
-                            *r * 2.0 - 1.0,
-                            *g * 2.0 - 1.0,
-                            *b * 2.0 - 1.0,
-                            1.,
-                        ]
-                    })
-                    .collect();
-                particles.insert_attribute(
-                    Mesh::ATTRIBUTE_COLOR,
-                    colors,
-                );
-            }
-
-            commands.spawn((
-                MaterialMeshBundle {
-                    mesh: meshes.add(particles),
-                    transform: Transform::from_xyz(
-                        transform.translation.x, transform.translation.y, transform.translation.z
-                    ),
-                    material: materials.add(ParticlesMaterial {
-                        time: now,
-                        start: now,
-                        end: now + EXPLODE_LIFE,
-                    }),
-                    ..default()
-                },
-                Explosion,
-                ExplosionLifetime {
-                    timer: Timer::new(Duration::from_secs_f32(EXPLODE_LIFE), TimerMode::Once)
-                },
-            ));
+        if let Some(VertexAttributeValues::Float32x3(
+                        positions,
+                    )) = particles.attribute(Mesh::ATTRIBUTE_POSITION)
+        {
+            let colors: Vec<[f32; 4]> = positions
+                .iter()
+                .map(|[r, g, b]| {
+                    [
+                        *r * 2.0 - 1.0,
+                        *g * 2.0 - 1.0,
+                        *b * 2.0 - 1.0,
+                        1.,
+                    ]
+                })
+                .collect();
+            particles.insert_attribute(
+                Mesh::ATTRIBUTE_COLOR,
+                colors,
+            );
         }
+
+        commands.spawn((
+            MaterialMeshBundle {
+                mesh: meshes.add(particles),
+                transform: Transform::from_xyz(
+                    explosion.position.x, explosion.position.y, explosion.position.z
+                ),
+                material: materials.add(ParticlesMaterial {
+                    time: now,
+                    start: now,
+                    end: now + EXPLODE_LIFE,
+                }),
+                ..default()
+            },
+            Explosion,
+            ExplosionLifetime {
+                timer: Timer::new(Duration::from_secs_f32(EXPLODE_LIFE), TimerMode::Once)
+            },
+        ));
     }
 }
 

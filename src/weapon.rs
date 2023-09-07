@@ -1,7 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
-use crate::destructible::DamageEvent;
+use crate::health::DamageEvent;
 
 pub struct WeaponPlugin;
 

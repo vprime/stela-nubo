@@ -7,7 +7,9 @@ use noise::{
 };
 extern crate queues;
 use queues::*;
-use crate::destructible::{DamageEvent, Explodeable};
+use crate::destructible::{Explodeable, ExplosionEvent};
+use crate::health::*;
+use crate::player::Player;
 
 const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
@@ -32,7 +34,8 @@ impl Plugin for MapGenerationPlugin {
                 worley_spawner,
                 despawn_cubes,
                 spawn_from_queue,
-                destroy_asteroids
+                destroy_asteroids,
+                damage_player
         ));
     }
 }
@@ -114,7 +117,11 @@ fn spawn_from_queue(
                         Collider::cuboid(1.0, 1.0, 1.0),
                         RigidBody::Static,
                         Position(position),
-                        Explodeable
+                        Explodeable,
+                        Health {
+                            full: 10.0,
+                            current: 10.0
+                        }
                     ))
                 },
                 Err(error) => println!("Error dequeing spawnnable")
@@ -214,15 +221,40 @@ fn despawn_cubes(
 }
 
 fn destroy_asteroids(
-    asteroids: Query<Entity, With<Asteroid>>,
+    asteroids: Query<(Entity, &Transform), With<Asteroid>>,
     mut commands: Commands,
-    mut damage_event: EventReader<DamageEvent>
+    mut death_event: EventReader<DeathEvent>,
+    mut explosion_event: EventWriter<ExplosionEvent>
 ){
-    for damage in damage_event.iter(){
-        if asteroids.contains(damage.subject) {
-            commands.entity(damage.subject).despawn();
+    for death in death_event.iter(){
+        if let Ok((entity, transform)) = asteroids.get(death.subject) {
+            explosion_event.send(ExplosionEvent {
+                position: transform.translation,
+                power: 1.0,
+            });
+            commands.entity(entity).despawn();
         }
     }
 }
 
-
+fn damage_player(
+    asteroids: Query<Entity, With<Asteroid>>,
+    players: Query<Entity, With<Player>>,
+    mut collision_event: EventReader<CollisionStarted>,
+    mut damage_event: EventWriter<DamageEvent>
+){
+    for collision in collision_event.iter() {
+        if let Ok(player) = players.get(collision.0) {
+            if let Ok(asteroid) = asteroids.get(collision.1) {
+                println!("Player First hit");
+                damage_event.send(DamageEvent{subject: player, value: 10.0});
+            }
+        }
+        if let Ok(player) = players.get(collision.1) {
+            if let Ok(asteroid) = asteroids.get(collision.0) {
+                println!("Asteroid first hit");
+                damage_event.send(DamageEvent{subject: player, value: 10.0});
+            }
+        }
+    }
+}
