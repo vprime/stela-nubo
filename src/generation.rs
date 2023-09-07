@@ -7,7 +7,7 @@ use noise::{
 };
 extern crate queues;
 use queues::*;
-use crate::destructible::DamageEvent;
+use crate::destructible::{DamageEvent, Explodeable};
 
 const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
@@ -113,7 +113,8 @@ fn spawn_from_queue(
                     }, Asteroid,
                         Collider::cuboid(1.0, 1.0, 1.0),
                         RigidBody::Static,
-                        Position(position)
+                        Position(position),
+                        Explodeable
                     ))
                 },
                 Err(error) => println!("Error dequeing spawnnable")
@@ -220,7 +221,6 @@ fn destroy_asteroids(
     for damage in damage_event.iter(){
         if asteroids.contains(damage.subject) {
             commands.entity(damage.subject).despawn();
-            println!("Destroying Asteroid {0:?}!", damage.subject);
         }
     }
 }
