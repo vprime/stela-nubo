@@ -6,6 +6,7 @@ use crate::destructible::ExplosionEvent;
 use crate::input::PlayerAction;
 use crate::weapon::Cannon;
 use crate::health::*;
+use crate::application::*;
 
 const MOVE_SPEED:f32 = 5.0;
 const PITCH_SENSITIVITY: f32 = 10.0;
@@ -24,7 +25,9 @@ impl Plugin for PlayerControllerPlugin {
             .add_systems(PhysicsSchedule, (
                 player_linear_movement.before(PhysicsStepSet::BroadPhase),
                 player_angular_movement.before(PhysicsStepSet::BroadPhase),
-            ));
+            ))
+            .add_systems(OnEnter(AppState::PAUSE), pause_input)
+            .add_systems(OnEnter(AppState::PLAY), pause_input);
     }
 }
 
@@ -38,14 +41,35 @@ pub struct Player;
 #[derive(Component)]
 pub struct PlayerInput {
     pub direction: Vec3,
-    pub rotation: Vec3
+    pub rotation: Vec3,
+    pub enabled: bool,
 }
 
 impl Default for PlayerInput {
     fn default() -> Self {
         Self {
             direction: Vec3::ZERO,
-            rotation: Vec3::ZERO
+            rotation: Vec3::ZERO,
+            enabled: true
+        }
+    }
+}
+
+
+fn pause_input(
+    current_state: ResMut<State<AppState>>,
+    mut player_input: Query<&mut PlayerInput>
+){
+    match current_state.get() {
+        AppState::PLAY => {
+            for mut input in &mut player_input {
+                input.enabled = true;
+            }
+        },
+        AppState::PAUSE => {
+            for mut input in &mut player_input {
+                input.enabled = false;
+            }
         }
     }
 }
@@ -58,6 +82,9 @@ fn player_linear_movement(
     let (input,
         transform,
         mut velocity) = query.single_mut();
+    if !input.enabled {
+        return;
+    }
     let mut force = Vec3::ZERO;
     force += transform.forward() * input.direction.z * MOVE_SPEED;
     force += transform.right() * input.direction.x * STRAFE_SPEED;
@@ -76,6 +103,9 @@ fn player_angular_movement(
         transform,
         mut velocity) = query.single_mut();
 
+    if !input.enabled {
+        return;
+    }
     let mut force = Vec3::ZERO;
     force += transform.forward() * input.rotation.z *  ROLL_SPEED;
     force += transform.right() * input.rotation.x * PITCH_SENSITIVITY;
@@ -90,6 +120,12 @@ fn player_input(
 ){
     let (input_state, mut player_input, mut cannon) = query.single_mut();
 
+    if !player_input.enabled {
+        player_input.direction = Vec3::ZERO;
+        player_input.rotation = Vec3::ZERO;
+        cannon.0 = false;
+        return;
+    }
     let mut direction = Vec3::ZERO;
     if input_state.pressed(PlayerAction::Left){
         direction.x = input_state.value(PlayerAction::Left);
@@ -120,15 +156,18 @@ fn player_input(
 fn player_death(
     mut death_event: EventReader<DeathEvent>,
     mut explosion_event: EventWriter<ExplosionEvent>,
-    mut query: Query<(&mut Visibility, &Transform), With<Player>>,
+    mut query: Query<(&Transform, &mut Visibility, &mut PlayerInput), With<Player>>,
+    mut next_state: ResMut<NextState<AppState>>
 ){
     for death in death_event.iter(){
-        if let Ok((mut visibility, transform)) = query.get_mut(death.subject) {
+        if let Ok((transform, mut visibility,  mut input)) = query.get_mut(death.subject) {
+            input.enabled = false;
             *visibility = Visibility::Hidden;
             explosion_event.send(ExplosionEvent {
                 position: transform.translation,
                 power: 10.0
             });
+            next_state.set(AppState::PAUSE);
         }
     }
 }

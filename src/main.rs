@@ -19,7 +19,7 @@ use leafwing_input_manager::{
     action_state::ActionState
 };
 use generation::*;
-use crate::application::ApplicationPlugin;
+use crate::application::*;
 use crate::destructible::DestructiblesPlugin;
 use crate::input::{InputPlugin, PlayerAction};
 use crate::player::*;
@@ -45,6 +45,8 @@ fn main() {
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(Gravity(Vec3::ZERO))
         .add_systems(Startup, setup)
+        .add_systems(OnEnter(AppState::PAUSE), bevy_xpbd_3d::pause)
+        .add_systems(OnExit(AppState::PAUSE), bevy_xpbd_3d::resume)
         .run();
 }
 
