@@ -8,7 +8,7 @@ Stela nubo is a game created with Bevy and Rust
 [x] Input System
 [x] Be able to shoot 
 [x] destroy objects
-[] destruction effect
+[x] destruction effect
 [] player damage
 [] player death
 [] Menu

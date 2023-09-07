@@ -26,7 +26,7 @@ impl Plugin for DestructiblesPlugin {
             ));
     }
 }
-const EXPLODE_LIFE: f32 = 20.0;
+const EXPLODE_LIFE: f32 = 5.0;
 #[derive(Event)]
 pub struct DamageEvent {
     pub subject: Entity,
@@ -99,13 +99,10 @@ impl From<Particles> for Mesh {
             })
             .collect::<Vec<_>>();
 
-        let mut positions: Vec<[f32; 3]> = Vec::new();
-        let mut normals: Vec<[f32; 3]> = Vec::new();
-
-        for vert in vertices {
-            positions.push(vert.0);
-            normals.push(vert.1);
-        }
+        let positions: Vec<_> =
+            vertices.iter().map(|(p, _)| *p).collect();
+        let normals: Vec<_> =
+            vertices.iter().map(|(_, n)| *n).collect();
 
         let mut mesh =
             Mesh::new(PrimitiveTopology::PointList);
@@ -140,23 +137,27 @@ fn spawn_explosions(
             let mut particles =
                 Mesh::from(Particles { num_particles: 100 });
 
-            let position_attribute = particles.attribute(Mesh::ATTRIBUTE_POSITION).unwrap();
-            let VertexAttributeValues::Float32x3(positions) = position_attribute else {
-                panic!("Unexpected vertex format expected Float32x3.");
-            };
-            let mut colors: Vec<[f32; 4]> = Vec::new();
-            for position in positions {
-                colors.push( [
-                    position[0] * 2.0 - 1.0,
-                    position[1] * 2.0 - 1.0,
-                    position[2] * 2.0 - 1.0,
-                    1.,
-                ]);
+            if let Some(VertexAttributeValues::Float32x3(
+                            positions,
+                        )) = particles.attribute(Mesh::ATTRIBUTE_POSITION)
+            {
+                let colors: Vec<[f32; 4]> = positions
+                    .iter()
+                    .map(|[r, g, b]| {
+                        [
+                            *r * 2.0 - 1.0,
+                            *g * 2.0 - 1.0,
+                            *b * 2.0 - 1.0,
+                            1.,
+                        ]
+                    })
+                    .collect();
+                particles.insert_attribute(
+                    Mesh::ATTRIBUTE_COLOR,
+                    colors,
+                );
             }
-            particles.insert_attribute(
-                Mesh::ATTRIBUTE_COLOR,
-                colors,
-            );
+
             commands.spawn((
                 MaterialMeshBundle {
                     mesh: meshes.add(particles),

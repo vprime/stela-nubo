@@ -10,7 +10,6 @@ mod destructible;
 use bevy::{
     prelude::*,
 };
-use bevy::reflect::List;
 use bevy_xpbd_3d::prelude::*;
 use leafwing_input_manager::{
     prelude::*,

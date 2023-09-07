@@ -42,7 +42,7 @@ fn vertex(vertex: Vertex) -> MeshVertexOutput {
     //let sine = sin(frequency * time.time_since_startup + vertex.position.y + vertex.position.z);
     //let position_diff = 1.0 - pow(thickness * sine, how_long_to_stay_in_opposite_state);
     let elapsed = start - time.time_since_startup;
-    let position = (vertex.normal * elapsed) * vertex.position;
+    let position = (vertex.normal * elapsed * 2.0) * vertex.position;
 
     var out: MeshVertexOutput;
 #ifdef SKINNED
@@ -91,5 +91,10 @@ fn fragment(
         let length = end - start;
         let mag = (in.color.r + in.color.g + in.color.b)/3.0;
         let value = 1.0 - (elapsed / length);
-        return vec4(value, value * mag, value * mag * mag, 0.4);
+        return vec4(
+        value,
+        value * mag,
+        value * mag * mag,
+        value
+        );
 }
