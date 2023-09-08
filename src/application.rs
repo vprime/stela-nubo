@@ -9,6 +9,7 @@ impl Plugin for ApplicationPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_state::<AppState>()
+            .add_state::<GameState>()
             .add_systems(Update, (
                 focus_control,
                 game_pause_button,
@@ -24,6 +25,14 @@ pub enum AppState {
     PLAY,
     #[default]
     PAUSE
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, States, Default)]
+pub enum GameState {
+    #[default]
+    Menu,
+    Playing,
+    GameOver
 }
 
 fn set_cursor_grab(

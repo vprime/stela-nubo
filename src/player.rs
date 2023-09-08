@@ -21,13 +21,13 @@ impl Plugin for PlayerControllerPlugin {
             .add_systems(Update, (
                 player_input,
                 player_death
-            ))
+            ).run_if(in_state(AppState::PLAY)))
             .add_systems(PhysicsSchedule, (
                 player_linear_movement.before(PhysicsStepSet::BroadPhase),
                 player_angular_movement.before(PhysicsStepSet::BroadPhase),
-            ))
-            .add_systems(OnEnter(AppState::PAUSE), pause_input)
-            .add_systems(OnEnter(AppState::PLAY), pause_input);
+            ).run_if(in_state(AppState::PLAY)));
+            // .add_systems(OnEnter(AppState::PAUSE), pause_input)
+            // .add_systems(OnEnter(AppState::PLAY), pause_input)
     }
 }
 

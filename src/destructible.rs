@@ -10,6 +10,8 @@ use bevy::{
 };
 use std::time::Duration;
 use itertools::Itertools;
+use crate::util::{decay_after_lifetime, Lifetime};
+use crate::application::AppState;
 
 pub struct DestructiblesPlugin;
 
@@ -23,8 +25,8 @@ impl Plugin for DestructiblesPlugin {
             .add_systems(Update, (
                 update_time_for_particles_material,
                 spawn_explosions,
-                decay_explosions,
-            ));
+                decay_after_lifetime::<Explosion>,
+            ).run_if(in_state(AppState::PLAY)));
     }
 }
 const EXPLODE_LIFE: f32 = 5.0;
@@ -40,11 +42,6 @@ pub struct Explodeable;
 
 #[derive(Component)]
 pub struct Explosion;
-
-#[derive(Component)]
-pub struct ExplosionLifetime {
-    timer: Timer
-}
 
 #[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone)]
 #[uuid = "00cfdf10-7270-490d-8841-cf08b476303a"]
@@ -172,22 +169,9 @@ fn spawn_explosions(
                 ..default()
             },
             Explosion,
-            ExplosionLifetime {
+            Lifetime {
                 timer: Timer::new(Duration::from_secs_f32(EXPLODE_LIFE), TimerMode::Once)
             },
         ));
-    }
-}
-
-fn decay_explosions(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut ExplosionLifetime)>
-){
-    for (entity, mut lifetime) in query.iter_mut() {
-        lifetime.timer.tick(time.delta());
-        if lifetime.timer.finished() {
-            commands.entity(entity).despawn();
-        }
     }
 }

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::application::AppState;
 
 
 pub struct HealthPlugin;
@@ -7,7 +8,8 @@ impl Plugin for HealthPlugin {
         app
             .add_event::<DamageEvent>()
             .add_event::<DeathEvent>()
-            .add_systems(Update, process_damage_to_health);
+            .add_systems(Update,
+                         (process_damage_to_health).run_if(in_state(AppState::PLAY)));
     }
 }
 

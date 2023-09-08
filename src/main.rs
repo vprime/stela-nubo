@@ -6,6 +6,7 @@ mod input;
 mod application;
 mod destructible;
 mod health;
+mod menu;
 
 // Entrypoint for the main game binary
 use bevy::{
@@ -25,6 +26,7 @@ use crate::input::{InputPlugin, PlayerAction};
 use crate::player::*;
 use crate::weapon::{WeaponBundle, WeaponOptions, WeaponPlugin};
 use crate::health::*;
+use crate::menu::*;
 
 
 const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
@@ -40,7 +42,8 @@ fn main() {
             ApplicationPlugin,
             WeaponPlugin,
             DestructiblesPlugin,
-            HealthPlugin
+            HealthPlugin,
+            MenuPlugin
         ))
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .insert_resource(Gravity(Vec3::ZERO))

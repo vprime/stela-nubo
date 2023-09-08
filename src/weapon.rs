@@ -2,6 +2,8 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
 use crate::health::DamageEvent;
+use crate::util::{decay_after_lifetime, Lifetime};
+use crate::application::AppState;
 
 pub struct WeaponPlugin;
 
@@ -9,7 +11,11 @@ impl Plugin for WeaponPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Startup, setup)
-            .add_systems(Update, (shoot_weapons, decay_bullets, bullet_damage));
+            .add_systems(Update, (
+                shoot_weapons,
+                decay_after_lifetime::<Bullet>,
+                bullet_damage
+            ).run_if(in_state(AppState::PLAY)));
     }
 }
 
@@ -21,11 +27,6 @@ pub struct NextShot(pub f32);
 
 #[derive(Component)]
 pub struct Bullet;
-
-#[derive(Component)]
-struct BulletLifespan {
-    timer: Timer
-}
 
 #[derive(Component)]
 pub struct WeaponOptions {
@@ -92,7 +93,7 @@ fn shoot_weapons(
             material: handles.material.clone(),
             ..default()
         }, Bullet,
-            BulletLifespan {
+            Lifetime {
                 timer: Timer::new(Duration::from_secs(3), TimerMode::Once)
             },
             Collider::cuboid(0.1, 0.1, 0.1),
@@ -103,19 +104,6 @@ fn shoot_weapons(
         ));
 
         next.0 = now + options.rate;
-    }
-}
-
-fn decay_bullets(
-    time: Res<Time>,
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut BulletLifespan)>
-){
-    for (entity, mut lifetime) in query.iter_mut() {
-        lifetime.timer.tick(time.delta());
-        if lifetime.timer.finished() {
-            commands.entity(entity).despawn();
-        }
     }
 }
 
@@ -131,14 +119,14 @@ fn bullet_damage(
                 subject: *entity2,
                 value: 1.0
             });
-            commands.entity(*entity1).despawn();
+            commands.entity(*entity1).despawn_recursive();
         }
         if bullets.contains(*entity2) {
             damage_event.send(DamageEvent {
                 subject: *entity1,
                 value: 1.0
             });
-            commands.entity(*entity2).despawn();
+            commands.entity(*entity2).despawn_recursive();
         }
     }
 }

@@ -10,6 +10,7 @@ use queues::*;
 use crate::destructible::{Explodeable, ExplosionEvent};
 use crate::health::*;
 use crate::player::Player;
+use crate::application::AppState;
 
 const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
@@ -36,7 +37,7 @@ impl Plugin for MapGenerationPlugin {
                 spawn_from_queue,
                 destroy_asteroids,
                 damage_player
-        ));
+        ).run_if(in_state(AppState::PLAY)));
     }
 }
 
@@ -215,7 +216,7 @@ fn despawn_cubes(
             if intersecting(&entity_address, &spawner_address, &spawner_area.radius) {
                 continue;
             }
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
@@ -232,7 +233,7 @@ fn destroy_asteroids(
                 position: transform.translation,
                 power: 1.0,
             });
-            commands.entity(entity).despawn();
+            commands.entity(entity).despawn_recursive();
         }
     }
 }
