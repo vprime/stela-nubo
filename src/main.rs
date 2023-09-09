@@ -1,13 +1,12 @@
 mod player;
 mod util;
-mod weapon;
-mod input;
-mod destructible;
-mod health;
 mod states;
 mod camera;
 mod ui;
 mod arena;
+mod effects;
+mod components;
+mod spawnable;
 
 // Entrypoint for the main game binary
 use bevy::{
@@ -20,11 +19,10 @@ use leafwing_input_manager::{
 };
 use crate::arena::ArenaPlugin;
 use crate::camera::CameraPlugin;
-use crate::destructible::DestructiblesPlugin;
-use crate::input::InputPlugin;
-use crate::weapon::WeaponPlugin;
-use crate::health::HealthPlugin;
+use crate::components::ComponentPlugin;
+use crate::effects::EffectsPlugin;
 use crate::player::PlayerPlugin;
+use crate::spawnable::SpawnablesPlugin;
 use crate::states::*;
 use crate::ui::UiPlugin;
 
@@ -38,11 +36,10 @@ fn main() {
             PhysicsPlugins::default(),
             PlayerPlugin,
             ArenaPlugin,
-            InputPlugin,
+            ComponentPlugin,
             StatesPlugin,
-            WeaponPlugin,
-            DestructiblesPlugin,
-            HealthPlugin,
+            SpawnablesPlugin,
+            EffectsPlugin,
             UiPlugin,
             CameraPlugin
         ))

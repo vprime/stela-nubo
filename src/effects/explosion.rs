@@ -4,74 +4,14 @@ use bevy::{
         mesh::VertexAttributeValues,
         render_resource::*,
     },
-    reflect::{
-        TypeUuid, TypePath
-    },
 };
 use std::time::Duration;
 use itertools::Itertools;
-use crate::util::{decay_after_lifetime, Lifetime};
-use crate::states::{GameStates, AppStates};
+use crate::effects::{Explosion, ExplosionEvent, Particles, ParticlesMaterial};
+use crate::util::{Lifetime};
 
-pub struct DestructiblesPlugin;
-
-impl Plugin for DestructiblesPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_event::<ExplosionEvent>()
-            .add_plugins((
-                MaterialPlugin::<ParticlesMaterial>::default(),
-            ))
-            .add_systems(Update, (
-                update_time_for_particles_material,
-                spawn_explosions,
-                decay_after_lifetime::<Explosion>,
-            )
-                .run_if(in_state(GameStates::Playing))
-                .run_if(in_state(AppStates::Game)));
-    }
-}
 const EXPLODE_LIFE: f32 = 5.0;
 
-#[derive(Event)]
-pub struct ExplosionEvent {
-    pub position: Vec3,
-    pub power: f32
-}
-
-#[derive(Component)]
-pub struct Explodeable;
-
-#[derive(Component)]
-pub struct Explosion;
-
-#[derive(AsBindGroup, TypeUuid, TypePath, Debug, Clone)]
-#[uuid = "00cfdf10-7270-490d-8841-cf08b476303a"]
-pub struct ParticlesMaterial {
-    #[uniform(0)]
-    time: f32,
-    #[uniform(1)]
-    start: f32,
-    #[uniform(2)]
-    end: f32,
-}
-
-#[derive(Debug, Copy, Clone)]
-struct Particles {
-    num_particles: u32,
-}
-
-impl Material for ParticlesMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/particle.wgsl".into()
-    }
-    fn vertex_shader() -> ShaderRef {
-        "shaders/particle.wgsl".into()
-    }
-    fn alpha_mode(&self) -> AlphaMode {
-        AlphaMode::Blend
-    }
-}
 
 impl From<Particles> for Mesh {
     fn from(particles: Particles) -> Self {
@@ -114,7 +54,7 @@ impl From<Particles> for Mesh {
     }
 }
 
-fn update_time_for_particles_material(
+pub fn update_time_for_particles_material(
     mut materials: ResMut<Assets<ParticlesMaterial>>,
     time: Res<Time>,
 ){
@@ -123,7 +63,7 @@ fn update_time_for_particles_material(
     }
 }
 
-fn spawn_explosions(
+pub fn spawn_explosions(
     time: Res<Time>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,

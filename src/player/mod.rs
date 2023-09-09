@@ -2,14 +2,15 @@
 use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use bevy::prelude::*;
 use leafwing_input_manager::{Actionlike, InputManagerBundle};
-use leafwing_input_manager::prelude::{ActionState, InputMap};
-use crate::destructible::ExplosionEvent;
-use crate::input::PlayerAction;
-use crate::weapon::{Cannon, WeaponBundle, WeaponOptions};
-use crate::health::*;
+use leafwing_input_manager::prelude::{ActionState, InputManagerPlugin, InputMap};
+use crate::spawnable::{Cannon, WeaponBundle, WeaponOptions};
 use crate::states::{AppStates, GameStates};
 use crate::arena::generation::{SpawnArea, PreviousSpawnUpdate, MapAddress};
+use crate::components::{DeathEvent, Health};
+use crate::effects::ExplosionEvent;
+use crate::player::input::PlayerAction;
 
+pub mod input;
 const MOVE_SPEED:f32 = 5.0;
 const PITCH_SENSITIVITY: f32 = 10.0;
 const ROLL_SPEED:f32 = 10.0;
@@ -20,6 +21,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(InputManagerPlugin::<PlayerAction>::default())
             .add_systems(Update, (
                 player_input,
                 player_death
@@ -58,7 +60,7 @@ impl Default for PlayerInput {
         Self {
             direction: Vec3::ZERO,
             rotation: Vec3::ZERO,
-            enabled: true
+            enabled: false
         }
     }
 }
@@ -81,6 +83,7 @@ impl Default for PlayerInput {
 //         }
 //     }
 // }
+
 
 fn player_linear_movement(
     time: Res<Time>,

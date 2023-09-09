@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, WindowFocused};
 use leafwing_input_manager::prelude::ActionState;
-use crate::input::PlayerAction;
+use crate::player::input::PlayerAction;
 use crate::states::{AppStates, GameStates};
 
 pub fn set_cursor_grab(

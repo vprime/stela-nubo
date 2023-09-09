@@ -22,3 +22,13 @@ pub fn decay_after_lifetime<T:Component>(
         }
     }
 }
+
+
+pub fn clean_up<T: Component>(
+    mut commands: Commands,
+    query: Query<Entity, With<T>>
+){
+    for item in query.iter() {
+        commands.entity(item).despawn_recursive();
+    }
+}

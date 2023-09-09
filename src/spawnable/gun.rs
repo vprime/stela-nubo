@@ -1,80 +1,12 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
-use crate::health::DamageEvent;
-use crate::states::{GameStates, AppStates};
-use crate::util::{decay_after_lifetime, Lifetime};
+use crate::components::DamageEvent;
+use crate::spawnable::{Bullet, Cannon, NextShot, SpawnableHandles, WeaponBundle, WeaponOptions};
+use crate::util::{Lifetime};
 
-pub struct WeaponPlugin;
 
-impl Plugin for WeaponPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, setup)
-            .add_systems(Update, (
-                shoot_weapons,
-                decay_after_lifetime::<Bullet>,
-                bullet_damage
-            ).run_if(in_state(GameStates::Playing))
-                .run_if(in_state(AppStates::Game)));
-    }
-}
-
-#[derive(Component)]
-pub struct Cannon(pub bool);
-
-#[derive(Component)]
-pub struct NextShot(pub f32);
-
-#[derive(Component)]
-pub struct Bullet;
-
-#[derive(Component)]
-pub struct WeaponOptions {
-    pub rate: f32,
-    pub speed: f32,
-    pub power: f32
-}
-
-#[derive(Bundle)]
-pub struct WeaponBundle {
-    pub weapon: Cannon,
-    pub next_shot: NextShot,
-    pub options: WeaponOptions
-}
-
-#[derive(Component)]
-struct SpawnableHandles {
-    mesh: Handle<Mesh>,
-    material: Handle<StandardMaterial>
-}
-
-impl Default for WeaponBundle {
-    fn default() -> Self {
-        Self {
-            weapon: Cannon(false),
-            next_shot: NextShot(0.0),
-            options: WeaponOptions {
-                rate: 1.0,
-                speed: 1.0,
-                power: 1.0
-            }
-        }
-    }
-}
-
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-){
-    commands.spawn(SpawnableHandles {
-        mesh: meshes.add(Mesh::from(shape::Cube {size: 0.1})),
-        material: materials.add(Color::rgb(0.95, 0.9, 0.8).into()),
-    });
-}
-
-fn shoot_weapons(
+pub fn shoot_weapons(
     time: Res<Time>,
     handle_query: Query<&SpawnableHandles>,
     mut commands: Commands,
@@ -108,7 +40,7 @@ fn shoot_weapons(
     }
 }
 
-fn bullet_damage(
+pub fn bullet_damage(
     bullets: Query<Entity, With<Bullet>>,
     mut commands: Commands,
     mut collision_event: EventReader<CollisionStarted>,

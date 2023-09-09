@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use queues::Queue;
-use crate::arena::generation::{clean_up_map, damage_player, despawn_cubes, destroy_asteroids, spawn_from_queue, spawn_setup, worley_spawner};
+use crate::arena::generation::{Asteroid, clean_up_map, damage_player, despawn_cubes, destroy_asteroids, spawn_from_queue, spawn_setup, worley_spawner};
 use crate::states::{AppStates, GameStates};
 
 pub mod generation;

@@ -3,15 +3,6 @@ use leafwing_input_manager::axislike::VirtualAxis;
 use leafwing_input_manager::prelude::*;
 use leafwing_input_manager::user_input::InputKind;
 
-pub struct InputPlugin;
-
-impl Plugin for InputPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_plugins(InputManagerPlugin::<PlayerAction>::default());
-    }
-}
-
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug, Reflect)]
 pub enum PlayerAction {
     // Flight Controls

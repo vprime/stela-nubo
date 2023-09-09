@@ -6,8 +6,8 @@ use noise::{
 };
 extern crate queues;
 use queues::*;
-use crate::destructible::{Explodeable, ExplosionEvent};
-use crate::health::*;
+use crate::components::{DamageEvent, DeathEvent, Health};
+use crate::effects::{Explodeable, ExplosionEvent};
 use crate::player::Player;
 use crate::states::{GameStates, AppStates};
 
