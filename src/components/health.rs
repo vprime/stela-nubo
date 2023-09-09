@@ -12,7 +12,7 @@ pub fn process_damage_to_health(
             subject_health.current = (0.0f32).max(subject_health.current - damage.value);
             println!("Damage: {0} current: {1}", damage.value, subject_health.current);
             if subject_health.current == 0.0 {
-                death_event.send(DeathEvent { subject: damage.subject});
+                death_event.send(DeathEvent { subject: damage.subject, source: damage.source});
             }
         }
     }

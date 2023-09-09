@@ -3,7 +3,7 @@ use bevy_xpbd_3d::{ prelude::*, PhysicsSchedule, PhysicsStepSet };
 use bevy::prelude::*;
 use leafwing_input_manager::{Actionlike, InputManagerBundle};
 use leafwing_input_manager::prelude::{ActionState, InputManagerPlugin, InputMap};
-use crate::spawnable::{Cannon, WeaponBundle, WeaponOptions};
+use crate::spawnable::{Cannon, NextShot, WeaponBundle, WeaponOptions};
 use crate::states::{AppStates, GameStates};
 use crate::arena::generation::{SpawnArea, PreviousSpawnUpdate, MapAddress};
 use crate::components::{DeathEvent, Health};
@@ -60,7 +60,7 @@ impl Default for PlayerInput {
         Self {
             direction: Vec3::ZERO,
             rotation: Vec3::ZERO,
-            enabled: false
+            enabled: true
         }
     }
 }
@@ -197,7 +197,8 @@ fn reset_player(
 fn spawn_player(
     mut commands: Commands,
     assets: Res<AssetServer>,
-    camera_query: Query<Entity, With<Camera>>
+    camera_query: Query<Entity, With<Camera>>,
+    time: Res<Time>
 ) {
     let player_spaceship = assets.load("models/player-ship/makoi.glb#Scene0");
     let camera = camera_query.single();
@@ -236,6 +237,7 @@ fn spawn_player(
                 speed: 10.0,
                 power: 1.0
             },
+            next_shot: NextShot(time.elapsed_seconds() + 0.5),
             ..default()
         },
         SpawnArea {

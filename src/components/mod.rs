@@ -16,6 +16,8 @@ impl Plugin for ComponentPlugin {
     }
 }
 
+#[derive(Component)]
+pub struct Owner(pub Entity);
 
 #[derive(Component)]
 pub struct Health {
@@ -26,10 +28,12 @@ pub struct Health {
 #[derive(Event)]
 pub struct DamageEvent {
     pub subject: Entity,
+    pub source: Entity,
     pub value: f32
 }
 
 #[derive(Event)]
 pub struct DeathEvent {
-    pub subject: Entity
+    pub subject: Entity,
+    pub source: Entity
 }

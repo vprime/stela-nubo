@@ -1,7 +1,7 @@
 use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
-use crate::components::DamageEvent;
+use crate::components::{DamageEvent, Owner};
 use crate::spawnable::{Bullet, Cannon, NextShot, SpawnableHandles, WeaponBundle, WeaponOptions};
 use crate::util::{Lifetime};
 
@@ -10,11 +10,11 @@ pub fn shoot_weapons(
     time: Res<Time>,
     handle_query: Query<&SpawnableHandles>,
     mut commands: Commands,
-    mut query: Query<(&Cannon, &WeaponOptions, &Transform, &LinearVelocity, &mut NextShot)>
+    mut query: Query<(Entity, &Cannon, &WeaponOptions, &Transform, &LinearVelocity, &mut NextShot)>
 ){
     let now = time.elapsed_seconds();
     let handles = handle_query.single();
-    for (cannon_enabled, options, weapon_transform, weapon_velocity, mut next) in &mut query {
+    for (entity, cannon_enabled, options, weapon_transform, weapon_velocity, mut next) in &mut query {
         if !cannon_enabled.0 || next.0 > now {
             continue;
         }
@@ -33,7 +33,8 @@ pub fn shoot_weapons(
             Mass(options.power),
             RigidBody::Dynamic,
             Position(spawn_position),
-            LinearVelocity(spawn_velocity)
+            LinearVelocity(spawn_velocity),
+            Owner(entity)
         ));
 
         next.0 = now + options.rate;
@@ -41,22 +42,24 @@ pub fn shoot_weapons(
 }
 
 pub fn bullet_damage(
-    bullets: Query<Entity, With<Bullet>>,
+    bullets: Query<(Entity, &Owner), With<Bullet>>,
     mut commands: Commands,
     mut collision_event: EventReader<CollisionStarted>,
     mut damage_event: EventWriter<DamageEvent>
 ){
     for CollisionStarted(entity1, entity2) in collision_event.iter() {
-        if bullets.contains(*entity1) {
+        if let Ok((entity, owner)) = bullets.get(*entity1) {
             damage_event.send(DamageEvent {
                 subject: *entity2,
+                source: owner.0,
                 value: 1.0
             });
             commands.entity(*entity1).despawn_recursive();
         }
-        if bullets.contains(*entity2) {
+        if let Ok((entity, owner)) = bullets.get(*entity2) {
             damage_event.send(DamageEvent {
                 subject: *entity1,
+                source: owner.0,
                 value: 1.0
             });
             commands.entity(*entity2).despawn_recursive();

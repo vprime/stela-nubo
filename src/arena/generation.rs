@@ -227,13 +227,13 @@ pub fn damage_player(
         if let Ok(player) = players.get(collision.0) {
             if asteroids.contains(collision.1) {
                 println!("Player First hit");
-                damage_event.send(DamageEvent{subject: player, value: 10.0});
+                damage_event.send(DamageEvent{subject: player, source: collision.1, value: 10.0});
             }
         }
         if let Ok(player) = players.get(collision.1) {
             if asteroids.contains(collision.0) {
                 println!("Asteroid first hit");
-                damage_event.send(DamageEvent{subject: player, value: 10.0});
+                damage_event.send(DamageEvent{subject: player, source: collision.0, value: 10.0});
             }
         }
     }
