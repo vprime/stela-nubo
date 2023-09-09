@@ -4,11 +4,11 @@ use bevy::prelude::*;
 use leafwing_input_manager::{Actionlike, InputManagerBundle};
 use leafwing_input_manager::prelude::{ActionState, InputMap};
 use crate::destructible::ExplosionEvent;
-use crate::generation::{MapAddress, PreviousSpawnUpdate, SpawnArea};
 use crate::input::PlayerAction;
 use crate::weapon::{Cannon, WeaponBundle, WeaponOptions};
 use crate::health::*;
 use crate::states::{AppStates, GameStates};
+use crate::arena::generation::{SpawnArea, PreviousSpawnUpdate, MapAddress};
 
 const MOVE_SPEED:f32 = 5.0;
 const PITCH_SENSITIVITY: f32 = 10.0;

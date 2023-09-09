@@ -1,4 +1,3 @@
-
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
 use noise::{
@@ -15,46 +14,27 @@ use crate::states::{GameStates, AppStates};
 const SPAWN_SEED:u32 = 69;
 const SPAWN_CUTOFF:f64 = 0.7;
 
-pub struct MapGenerationPlugin;
 
 #[derive(Resource)]
-struct SpawnHashTable(PermutationTable);
+pub struct SpawnHashTable(PermutationTable);
 
-impl Plugin for MapGenerationPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, setup)
-            .add_systems(Update, (
-                worley_spawner,
-                despawn_cubes,
-                spawn_from_queue,
-                destroy_asteroids,
-                damage_player
-        )
-                .run_if(in_state(GameStates::Playing))
-                .run_if(in_state(AppStates::Game)));
-    }
-}
-
-#[derive(Component)]
-pub struct SpawnArea {
-    pub radius: i32,
-    pub scale: i32
-}
 
 #[derive(Component)]
 pub struct Asteroid;
 
-#[derive(Component)]
-pub struct PreviousSpawnUpdate(pub MapAddress);
 
 #[derive(Component)]
-struct SpawnQueue(Queue<AsteroidData>);
-
-#[derive(Component)]
-struct SpawnableHandles {
+pub struct SpawnableHandles {
     mesh: Handle<Mesh>,
     material: Handle<StandardMaterial>
+}
+
+
+#[derive(Clone)]
+struct AsteroidData {
+    address: MapAddress,
+    size: i32,
+    scale: i32
 }
 
 #[derive(Bundle)]
@@ -64,12 +44,14 @@ pub struct MapSpawnerBundle {
     spawn_queue: SpawnQueue
 }
 
-#[derive(Clone)]
-struct AsteroidData {
-    address: MapAddress,
-    size: i32,
-    scale: i32
+#[derive(Component)]
+pub struct SpawnArea {
+    pub radius: i32,
+    pub scale: i32
 }
+
+#[derive(Component)]
+pub struct PreviousSpawnUpdate(pub MapAddress);
 
 #[derive(Clone, PartialEq)]
 pub struct MapAddress {
@@ -78,7 +60,10 @@ pub struct MapAddress {
     pub z: i32
 }
 
-fn setup(
+#[derive(Component)]
+pub struct SpawnQueue(Queue<AsteroidData>);
+
+pub fn spawn_setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -91,7 +76,7 @@ fn setup(
         });
 }
 
-fn spawn_from_queue(
+pub fn spawn_from_queue(
     mut commands: Commands,
     mut spawn_queue_query: Query<&mut SpawnQueue, Changed<SpawnQueue>>,
     handle_query: Query<&SpawnableHandles>
@@ -141,7 +126,7 @@ fn address_to_translation(address: MapAddress, scale: i32) -> Vec3 {
     )
 }
 
-fn worley_spawner(
+pub fn worley_spawner(
     spawn_hasher: Res<SpawnHashTable>,
     mut query: Query<(&Transform, &SpawnArea, &mut PreviousSpawnUpdate)>,
     mut spawn_queue_query: Query<&mut SpawnQueue>
@@ -198,7 +183,7 @@ pub fn intersecting(a_point: &MapAddress, b_bound: &MapAddress, radius: &i32) ->
         (a_point.z < b_bound.z + radius && a_point.z > b_bound.z - radius)
 }
 
-fn despawn_cubes(
+pub fn despawn_cubes(
     mut commands: Commands,
     query: Query<(Entity, &Transform), With<Asteroid>>,
     spawner: Query<(&Transform, &SpawnArea)>
@@ -215,7 +200,7 @@ fn despawn_cubes(
     }
 }
 
-fn destroy_asteroids(
+pub fn destroy_asteroids(
     asteroids: Query<(Entity, &Transform), With<Asteroid>>,
     mut commands: Commands,
     mut death_event: EventReader<DeathEvent>,
@@ -232,7 +217,7 @@ fn destroy_asteroids(
     }
 }
 
-fn damage_player(
+pub fn damage_player(
     asteroids: Query<Entity, With<Asteroid>>,
     players: Query<Entity, With<Player>>,
     mut collision_event: EventReader<CollisionStarted>,
@@ -250,6 +235,21 @@ fn damage_player(
                 println!("Asteroid first hit");
                 damage_event.send(DamageEvent{subject: player, value: 10.0});
             }
+        }
+    }
+}
+
+pub fn clean_up_map(
+    asteroids: Query<Entity, With<Asteroid>>,
+    mut queues: Query<&mut SpawnQueue>,
+    mut commands: Commands,
+){
+    for asteroid in asteroids.iter() {
+        commands.entity(asteroid).despawn_recursive();
+    }
+    for mut queue in &mut queues.iter_mut() {
+        while queue.0.size() > 0 {
+            let _ = queue.0.remove();
         }
     }
 }

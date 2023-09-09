@@ -1,4 +1,3 @@
-mod generation;
 mod player;
 mod util;
 mod weapon;
@@ -8,6 +7,7 @@ mod health;
 mod states;
 mod camera;
 mod ui;
+mod arena;
 
 // Entrypoint for the main game binary
 use bevy::{
@@ -18,7 +18,7 @@ use leafwing_input_manager::{
     prelude::*,
     Actionlike
 };
-use generation::*;
+use crate::arena::ArenaPlugin;
 use crate::camera::CameraPlugin;
 use crate::destructible::DestructiblesPlugin;
 use crate::input::InputPlugin;
@@ -37,7 +37,7 @@ fn main() {
             DefaultPlugins,
             PhysicsPlugins::default(),
             PlayerPlugin,
-            MapGenerationPlugin,
+            ArenaPlugin,
             InputPlugin,
             StatesPlugin,
             WeaponPlugin,

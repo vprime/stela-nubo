@@ -13,7 +13,7 @@ Stela nubo is a game created with Bevy and Rust
 [x] player death
 [x] Menu
 [x] App Quit
-[] Game States: Start, Playing, End
+[x] Game States: Start, Playing, End
 [] Display Health
 [] Display Points
 [] Things that move
