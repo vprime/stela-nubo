@@ -11,7 +11,7 @@ use bevy::{
 use std::time::Duration;
 use itertools::Itertools;
 use crate::util::{decay_after_lifetime, Lifetime};
-use crate::application::AppState;
+use crate::states::{GameStates, AppStates};
 
 pub struct DestructiblesPlugin;
 
@@ -26,7 +26,9 @@ impl Plugin for DestructiblesPlugin {
                 update_time_for_particles_material,
                 spawn_explosions,
                 decay_after_lifetime::<Explosion>,
-            ).run_if(in_state(AppState::PLAY)));
+            )
+                .run_if(in_state(GameStates::Playing))
+                .run_if(in_state(AppStates::Game)));
     }
 }
 const EXPLODE_LIFE: f32 = 5.0;

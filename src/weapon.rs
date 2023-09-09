@@ -2,8 +2,8 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy_xpbd_3d::prelude::*;
 use crate::health::DamageEvent;
+use crate::states::{GameStates, AppStates};
 use crate::util::{decay_after_lifetime, Lifetime};
-use crate::application::AppState;
 
 pub struct WeaponPlugin;
 
@@ -15,7 +15,8 @@ impl Plugin for WeaponPlugin {
                 shoot_weapons,
                 decay_after_lifetime::<Bullet>,
                 bullet_damage
-            ).run_if(in_state(AppState::PLAY)));
+            ).run_if(in_state(GameStates::Playing))
+                .run_if(in_state(AppStates::Game)));
     }
 }
 

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use crate::application::AppState;
-
+use crate::states::{GameStates, AppStates};
 
 pub struct HealthPlugin;
 impl Plugin for HealthPlugin {
@@ -9,7 +8,9 @@ impl Plugin for HealthPlugin {
             .add_event::<DamageEvent>()
             .add_event::<DeathEvent>()
             .add_systems(Update,
-                         (process_damage_to_health).run_if(in_state(AppState::PLAY)));
+                         (process_damage_to_health)
+                             .run_if(in_state(GameStates::Playing))
+                             .run_if(in_state(AppStates::Game)));
     }
 }
 
@@ -39,7 +40,7 @@ fn process_damage_to_health(
         if let Ok(mut subject_health) = query.get_mut(damage.subject){
             subject_health.current = (0.0f32).max(subject_health.current - damage.value);
             println!("Damage: {0} current: {1}", damage.value, subject_health.current);
-            if (subject_health.current == 0.0){
+            if subject_health.current == 0.0 {
                 death_event.send(DeathEvent { subject: damage.subject});
             }
         }

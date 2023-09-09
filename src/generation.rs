@@ -10,17 +10,10 @@ use queues::*;
 use crate::destructible::{Explodeable, ExplosionEvent};
 use crate::health::*;
 use crate::player::Player;
-use crate::application::AppState;
+use crate::states::{GameStates, AppStates};
 
-const SPAWN_SPEED:f32 = 0.1;
 const SPAWN_SEED:u32 = 69;
-const SPAWN_FREQUENCY:f64 = 1.0;
-const SPAWN_DISPLACEMENT:f64 = 1.0;
-
 const SPAWN_CUTOFF:f64 = 0.7;
-const SPAWN_AREA: f32 = 100.0;
-const SPAWN_BLOCK_SIZE: f32 = 3.0;
-const SPAWN_DENSITY: f32 = 0.5;
 
 pub struct MapGenerationPlugin;
 
@@ -37,7 +30,9 @@ impl Plugin for MapGenerationPlugin {
                 spawn_from_queue,
                 destroy_asteroids,
                 damage_player
-        ).run_if(in_state(AppState::PLAY)));
+        )
+                .run_if(in_state(GameStates::Playing))
+                .run_if(in_state(AppStates::Game)));
     }
 }
 
@@ -103,7 +98,6 @@ fn spawn_from_queue(
 ){
     let handles = handle_query.single();
     for mut spawn_queue in &mut spawn_queue_query {
-        let size = spawn_queue.0.size();
         while spawn_queue.0.size() > 0 {
             let spawnable_result = spawn_queue.0.remove();
 
@@ -125,7 +119,7 @@ fn spawn_from_queue(
                         }
                     ))
                 },
-                Err(error) => println!("Error dequeing spawnnable")
+                Err(error) => println!("Error dequeing spawnnable: {0}", error)
             }
         }
     }
@@ -246,13 +240,13 @@ fn damage_player(
 ){
     for collision in collision_event.iter() {
         if let Ok(player) = players.get(collision.0) {
-            if let Ok(asteroid) = asteroids.get(collision.1) {
+            if asteroids.contains(collision.1) {
                 println!("Player First hit");
                 damage_event.send(DamageEvent{subject: player, value: 10.0});
             }
         }
         if let Ok(player) = players.get(collision.1) {
-            if let Ok(asteroid) = asteroids.get(collision.0) {
+            if asteroids.contains(collision.0) {
                 println!("Asteroid first hit");
                 damage_event.send(DamageEvent{subject: player, value: 10.0});
             }
