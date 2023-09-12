@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use crate::states::{AppStates, GameStates};
 use crate::ui::game_over::{GameOverUi, setup_game_over_ui};
 use crate::ui::main_menu::{MainMenuUi, setup_main_menu};
+use crate::ui::overlay::{setup_overlay_ui, update_health_overlay_text};
 use crate::ui::pause_menu::{open_pause_menu, PauseMenuUi};
 use crate::ui::victory::{setup_victory_ui, VictoryUi};
 
@@ -10,6 +11,7 @@ mod pause_menu;
 mod main_menu;
 mod game_over;
 mod victory;
+mod overlay;
 
 pub struct UiPlugin;
 
@@ -43,6 +45,9 @@ impl Plugin for UiPlugin {
             .add_systems(OnEnter(AppStates::Victory), setup_victory_ui)
             .add_systems(OnExit(AppStates::Victory), close_panel::<VictoryUi>);
 
+        app
+            .add_systems(OnEnter(AppStates::Game), setup_overlay_ui)
+            .add_systems(Update, (update_health_overlay_text).run_if(in_state(AppStates::Game)));
 
     }
 }
