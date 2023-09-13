@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy::window::{CursorGrabMode, WindowFocused};
 use leafwing_input_manager::prelude::ActionState;
+use crate::components::Score;
 use crate::player::input::PlayerAction;
+use crate::player::Player;
 use crate::states::{AppStates, GameStates};
 
 pub fn set_cursor_grab(
@@ -55,6 +57,17 @@ pub fn focus_control(
     for focus in window_focused.iter() {
         if !focus.focused {
             next_state.set(GameStates::Paused);
+        }
+    }
+}
+
+pub fn set_win_condition(
+    points_query: Query<&Score, With<Player>>,
+    mut next_state: ResMut<NextState<AppStates>>
+){
+    for points in points_query.iter() {
+        if points.current >= 100.0 {
+            next_state.set(AppStates::Victory);
         }
     }
 }

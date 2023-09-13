@@ -30,6 +30,7 @@ impl Plugin for StatesPlugin {
             .add_systems(Update, (
                 focus_control,
                 game_pause_button,
+                set_win_condition
             ).run_if(in_state(AppStates::Game)))
             .add_systems(OnEnter(GameStates::Paused), set_cursor_grab)
             .add_systems(OnEnter(GameStates::Playing), set_cursor_grab)

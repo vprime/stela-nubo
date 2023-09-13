@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::components::Health;
+use crate::components::{Health, Score};
 use crate::player::Player;
 use crate::ui::{FONT_PATH, MenuButtonAction, NORMAL_BUTTON, PANEL_BACKGROUND};
 
@@ -10,7 +10,7 @@ pub struct GameOverlayUi;
 pub struct HealthText;
 
 #[derive(Component)]
-struct PointText;
+pub struct PointText;
 
 pub fn setup_overlay_ui(
     mut commands: Commands,
@@ -50,7 +50,23 @@ pub fn setup_overlay_ui(
                 Label,
                 HealthText,
             ));
-
+            // Points text
+            parent.spawn((
+                TextBundle::from_section(
+                    "Points:",
+                    TextStyle {
+                        font: asset_server.load(FONT_PATH),
+                        font_size: 10.0,
+                        color: Color::WHITE,
+                    },
+                )
+                    .with_style(Style {
+                        margin: UiRect::all(Val::Px(5.)),
+                        ..default()
+                    }),
+                Label,
+                PointText,
+            ));
         });
 }
 
@@ -62,4 +78,14 @@ pub fn update_health_overlay_text(
     let mut text = text_query.single_mut();
 
     text.sections[0].value = format!("Health: {0:?} of {1:?}", health.current, health.full);
+}
+
+pub fn update_points_overlay_text(
+    points_query: Query<&Score, With<Player>>,
+    mut text_query: Query<&mut Text, With<PointText>>
+){
+    let points = points_query.single();
+    let mut text = text_query.single_mut();
+
+    text.sections[0].value = format!("Points: {0:?}", points.current);
 }

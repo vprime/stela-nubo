@@ -6,7 +6,7 @@ use leafwing_input_manager::prelude::{ActionState, InputManagerPlugin, InputMap}
 use crate::spawnable::{Cannon, NextShot, WeaponBundle, WeaponOptions};
 use crate::states::{AppStates, GameStates};
 use crate::arena::generation::{SpawnArea, PreviousSpawnUpdate, MapAddress};
-use crate::components::{DeathEvent, Health};
+use crate::components::{DeathEvent, Health, Score};
 use crate::effects::ExplosionEvent;
 use crate::player::input::PlayerAction;
 
@@ -209,7 +209,7 @@ fn spawn_player(
     }
 
     // player
-    commands.spawn((
+    let player = commands.spawn((
         SceneBundle {
             scene: player_spaceship,
             ..default()
@@ -228,7 +228,7 @@ fn spawn_player(
         },
         InputManagerBundle::<PlayerAction>{
             action_state: ActionState::default(),
-            input_map: input_map.build()
+            input_map: input_map.build(),
         },
         PlayerInput::default(),
         WeaponBundle {
@@ -245,10 +245,12 @@ fn spawn_player(
             scale: 5
         },
         PreviousSpawnUpdate(MapAddress{
-            x: 1024, y: 1024, z: 1024
-            //x: 0, y: 0, z: 0
-        })
-    )).push_children(&[camera]);
+            x: 1024, y: 1024, z: 1024,
+        }),
+    )).id();
+    commands.entity(player).insert(Score::default());
+
+    commands.entity(player).push_children(&[camera]);
 
     // sun
     commands.spawn(
