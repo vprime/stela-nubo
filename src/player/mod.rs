@@ -11,10 +11,10 @@ use crate::effects::ExplosionEvent;
 use crate::player::input::PlayerAction;
 
 pub mod input;
-const MOVE_SPEED:f32 = 5.0;
+const MOVE_SPEED:f32 = 50.0;
 const PITCH_SENSITIVITY: f32 = 10.0;
-const ROLL_SPEED:f32 = 10.0;
-const STRAFE_SPEED:f32 = 3.0;
+const ROLL_SPEED:f32 = 20.0;
+const STRAFE_SPEED:f32 = 10.0;
 
 pub struct PlayerPlugin;
 
@@ -38,9 +38,11 @@ impl Plugin for PlayerPlugin {
                 spawn_player
             ))
             .add_systems(OnExit(AppStates::Game), (
-                detach_camera_from_player,
-                reset_player.after(detach_camera_from_player)
-            ));
+                detach_camera_from_player
+            ))
+            .add_systems(OnEnter(AppStates::GameOver), reset_player)
+            .add_systems(OnEnter(AppStates::Victory), reset_player)
+            .add_systems(OnEnter(AppStates::MainMenu), reset_player);
     }
 }
 
@@ -242,7 +244,7 @@ fn spawn_player(
         },
         SpawnArea {
             radius: 10,
-            scale: 5
+            scale: 10
         },
         PreviousSpawnUpdate(MapAddress{
             x: 1024, y: 1024, z: 1024,

@@ -12,6 +12,7 @@ mod spawnable;
 use bevy::{
     prelude::*,
 };
+use bevy::window::PresentMode;
 use bevy_xpbd_3d::prelude::*;
 use leafwing_input_manager::{
     prelude::*,
@@ -32,7 +33,14 @@ const BACKGROUND_COLOR: Color = Color::rgb(0.0, 0.0, 0.0);
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins,
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Stela Nubo".to_string(),
+                    fit_canvas_to_parent: true,
+                    ..default()
+                }),
+                ..default()
+            }),
             PhysicsPlugins::default(),
             PlayerPlugin,
             ArenaPlugin,
